@@ -2,9 +2,9 @@ package sbtix.internal
 
 import java.io.{File, PrintWriter}
 import coursier.util.Artifact
-import coursier.core.{Authentication, Attributes, Type, Classifier}
+import coursier.core.{Authentication, Type, Classifier}
 import upickle.default._
-import upickle.default.{ReadWriter => RW, macroRW => MMW}
+import upickle.default.{ReadWriter => RW}
 
 object ArtifactWriter {
 
@@ -38,9 +38,6 @@ object ArtifactWriter {
       )
     }
   )
-
-  // Attributes RW might not be directly needed for util.Artifact, but keep for potential nested use in Auth
-  implicit val attrRW: RW[Attributes] = MMW[Attributes]
 
   // Define ReadWriter for coursier.util.Artifact
   // Based on error messages, assumes util.Artifact has url, changing, authentication, extra
@@ -100,4 +97,4 @@ object ArtifactWriter {
       writer.close()
     }
   }
-} 
+}

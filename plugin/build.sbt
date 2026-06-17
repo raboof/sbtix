@@ -1,4 +1,37 @@
+val scala212 = "2.12.20"
+val scala3   = "3.8.4"
+val sbt1     = "1.12.11"
+val sbt2     = "2.0.0"
+val coursier = "2.1.24"
+
+def localPluginJarPath(org: String, module: String, version: String, scalaBin: String, sbtBin: String) = {
+  val ivyLocalOrg = Path.userHome / ".ivy2" / "local" / org
+  if (sbtBin == "1.0") {
+    ivyLocalOrg / module / s"scala_$scalaBin" / s"sbt_$sbtBin" / version / "jars" / s"$module.jar"
+  } else {
+    val sbtMajor = sbtBin.takeWhile(_ != '.')
+    val artifact = s"${module}_sbt${sbtMajor}_$scalaBin"
+    ivyLocalOrg / artifact / version / "jars" / s"$artifact.jar"
+  }
+}
+
+def coursierDependency(module: String): ModuleID =
+  ("io.get-coursier" %% module % coursier)
+    .cross(CrossVersion.for3Use2_13)
+    .exclude("org.scala-lang.modules", "scala-collection-compat_2.13")
+    .exclude("org.scala-lang.modules", "scala-xml_2.13")
+
+ThisBuild / scalaVersion := scala212
+ThisBuild / crossScalaVersions := Seq(scala212, scala3)
+
 sbtPlugin := true
+
+pluginCrossBuild / sbtVersion := {
+  scalaBinaryVersion.value match {
+    case "2.12" => sbt1
+    case _      => sbt2
+  }
+}
 
 name         := "sbtix"
 organization := "se.nullable.sbtix"
@@ -39,12 +72,17 @@ scriptedLaunchOpts ++= Seq(
   // - `sbtix.sourcePath` lets Nix build the sbtix plugin from this checkout (nix-build flow)
   // - `sbtix.pluginJarPath` pins the loaded plugin jar so we can detect stale classpaths
   s"-Dsbtix.sourcePath=${baseDirectory.value.getParentFile.getAbsolutePath}",
-  s"-Dsbtix.pluginJarPath=${(Path.userHome / ".ivy2" / "local" / "se.nullable.sbtix" / "sbtix" / "scala_2.12" / "sbt_1.0" / version.value / "jars" / "sbtix.jar").getAbsolutePath}"
+  s"-Dsbtix.pluginJarPath=${localPluginJarPath(organization.value, name.value, version.value, scalaBinaryVersion.value, (pluginCrossBuild / sbtBinaryVersion).value).getAbsolutePath}"
 )
 scriptedBufferLog := false
 
+Compile / unmanagedSources / excludeFilter := {
+  val current = (Compile / unmanagedSources / excludeFilter).value
+  if (scalaBinaryVersion.value == "3") current || "NixPlugin.scala" else current
+}
+
 // Explicitly set the sbt version for scripted tests
-scriptedSbt := sbtVersion.value
+scriptedSbt := (pluginCrossBuild / sbtVersion).value
 
 // Scripted tests must not create or require JARs inside the test projects.
 // We bootstrap the plugin from Nix (see `sbtix.sourcePath` above) and keep the
@@ -86,8 +124,8 @@ Compile / resourceGenerators += Def.task {
 scalafmtOnCompile := false
 
 libraryDependencies ++= Seq(
-  "io.get-coursier" %% "coursier" % "2.1.24",
-  "io.get-coursier" %% "coursier-sbt-maven-repository" % "2.1.24",
+  coursierDependency("coursier"),
+  coursierDependency("coursier-sbt-maven-repository"),
   "com.lihaoyi" %% "upickle" % "4.4.3",
   "org.scalatest" %% "scalatest" % "3.2.20" % Test
 )
