@@ -37,12 +37,13 @@ let
 
         src = ./plugin;
         repo = [ (import ./plugin/repo.nix)
+                 (import ./plugin/repo-sbt2.nix)
                  (import ./plugin/project/repo.nix)
                  (import ./plugin/nix-exprs/manual-repo.nix)
                ];
 
         installPhase =''
-          sbt publishLocal
+          sbt +publishLocal
           mkdir -p $out/plugin-repo
           cp -r ./.ivy2-home/local/. $out/plugin-repo/
         '';
