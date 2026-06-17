@@ -197,7 +197,8 @@ class CoursierArtifactFetcher(
   extraIvyProps: Map[String, String] = Map.empty,
   artifactClassifiers: Seq[String] = Seq("tests", "sources"),
   lockPomDependencyArtifacts: Boolean = false,
-  lockEvictedModulePoms: Boolean = false
+  lockEvictedModulePoms: Boolean = false,
+  localArtifactSearchDirectories: Seq[File] = Seq.empty
 ) {
 
   private val metaArtifactCollector = new ConcurrentSkipListSet[MetaArtifact]()
@@ -1318,9 +1319,18 @@ class CoursierArtifactFetcher(
           cacheAuthorityCandidates(uri).map { authority =>
             new File(new File(new File(CacheDefaults.location, scheme), authority), path)
           }
-        candidates.find(_.isFile).orElse(candidates.headOption)
+        val cacheCandidate = candidates.find(_.isFile).orElse(candidates.headOption)
+        cacheCandidate.filter(_.isFile).orElse(localArtifactForUrl(uri)).orElse(cacheCandidate)
       }
     }
+
+  private def localArtifactForUrl(uri: URI): Option[File] = {
+    val path = Option(uri.getPath).getOrElse("")
+    val slash = path.lastIndexOf('/')
+    val fileName = if (slash >= 0) path.substring(slash + 1) else path
+    if (fileName.isEmpty) None
+    else localArtifactSearchDirectories.iterator.map(dir => new File(dir, fileName)).find(_.isFile)
+  }
 
   private def cacheAuthorityCandidates(uri: URI): Seq[String] = {
     val host = Option(uri.getHost)

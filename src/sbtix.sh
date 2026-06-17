@@ -3,6 +3,25 @@ set -euo pipefail
 
 SBT_OPTS=${SBT_OPTS:-}
 
+detect_project_sbt_version() {
+  if [ -f "project/build.properties" ]; then
+    sed -n 's/^[[:space:]]*sbt\.version[[:space:]]*=[[:space:]]*\([^[:space:]#]*\).*$/\1/p' \
+      "project/build.properties" | head -n 1
+  fi
+}
+
+SBTIX_SBT_VERSION="$(detect_project_sbt_version)"
+case "${SBTIX_SBT_VERSION}" in
+  2.*)
+    SBTIX_SBT_MAJOR=2
+    SBTIX_PLUGIN_JAR_PATH="@pluginJarSbt2@"
+    ;;
+  *)
+    SBTIX_SBT_MAJOR=1
+    SBTIX_PLUGIN_JAR_PATH="@pluginJarSbt1@"
+    ;;
+esac
+
 # Ensure the JVM sees a consistent user home.
 #
 # Why: Nix shells / CI often set $HOME to a temp directory, but the Java
@@ -15,11 +34,14 @@ SBT_OPTS=${SBT_OPTS:-}
 # appending our value makes the JVM pick up the last one.
 SBT_OPTS="${SBT_OPTS} -Duser.home=${HOME}"
 
-IVY_LOCAL="${HOME}/.ivy2/local/se.nullable.sbtix"
-if [ -d "${IVY_LOCAL}" ]; then
-  echo "Deleting any cached sbtix plugins in '~/.ivy'. So the most recent version from nix is used."
+IVY_LOCAL_ROOT="${HOME}/.ivy2/local"
+IVY_LOCAL="${IVY_LOCAL_ROOT}/se.nullable.sbtix"
+if [ -e "${IVY_LOCAL}" ] || [ -L "${IVY_LOCAL}" ]; then
+  echo "Deleting any cached sbtix plugins in '~/.ivy2/local'. So the most recent version from nix is used."
   rm -rf "${IVY_LOCAL}"
 fi
+mkdir -p "${IVY_LOCAL_ROOT}"
+ln -s "@pluginRepoOrg@" "${IVY_LOCAL}"
 
 GLOBAL_DIR="${HOME}/.sbtix"
 PLUGIN_DIR="${GLOBAL_DIR}/plugins"
@@ -37,7 +59,7 @@ mkdir -p "${PLUGIN_DIR}"
 # This is especially likely with Nix store files, which often have an epoch
 # mtime that can confuse file-change detection.
 PLUGIN_STAMP_FILE="${GLOBAL_DIR}/.sbtix-plugin-stamp"
-CURRENT_PLUGIN_STAMP="@plugin@|@pluginJar@"
+CURRENT_PLUGIN_STAMP="@plugin@|${SBTIX_PLUGIN_JAR_PATH}|sbt-${SBTIX_SBT_MAJOR}"
 OLD_PLUGIN_STAMP=""
 if [ -f "${PLUGIN_STAMP_FILE}" ]; then
   OLD_PLUGIN_STAMP="$(cat "${PLUGIN_STAMP_FILE}" 2>/dev/null || true)"
@@ -50,7 +72,6 @@ fi
 
 # Expose the in-store plugin JAR to any sbt process launched through this
 # wrapper so generated nix expressions can reference it directly.
-export SBTIX_PLUGIN_JAR_PATH="@pluginJar@"
 export SBT_OPTS="$SBT_OPTS -Dsbtix.pluginJarPath=${SBTIX_PLUGIN_JAR_PATH}"
 
 # Prefer the in-store checkout of the sbtix sources that produced this wrapper.
@@ -82,6 +103,47 @@ export SBT_OPTS="-Dsbt.global.base=${GLOBAL_DIR}${SBT_OPTS:+ ${SBT_OPTS}}"
 echo "Updating ${PLUGIN_DIR}/sbtix_plugin.sbt symlink"
 ln -sf "@plugin@" "${PLUGIN_DIR}/sbtix_plugin.sbt"
 
+INJECTED_PLUGIN_FILES=""
+CREATED_PLUGIN_DIRS=""
+
+cleanup_injected_plugins() {
+  for file in ${INJECTED_PLUGIN_FILES}; do
+    if [ -L "${file}" ] || [ -f "${file}" ]; then
+      rm -f "${file}"
+    fi
+  done
+  if [ -L "${IVY_LOCAL}" ] && [ "$(readlink "${IVY_LOCAL}")" = "@pluginRepoOrg@" ]; then
+    rm -f "${IVY_LOCAL}"
+  fi
+  for dir in ${CREATED_PLUGIN_DIRS}; do
+    rmdir "${dir}" 2>/dev/null || true
+  done
+}
+
+inject_project_plugin() {
+  dir="$1"
+  if [ ! -d "${dir}" ]; then
+    mkdir -p "${dir}"
+    CREATED_PLUGIN_DIRS="${dir} ${CREATED_PLUGIN_DIRS}"
+  fi
+
+  file="${dir}/sbtix-auto-plugin-$$.sbt"
+  if [ -e "${file}" ] || [ -L "${file}" ]; then
+    echo "sbtix: refusing to overwrite existing temporary plugin file: ${file}" >&2
+    exit 1
+  fi
+
+  ln -s "@plugin@" "${file}"
+  INJECTED_PLUGIN_FILES="${file} ${INJECTED_PLUGIN_FILES}"
+}
+
+trap cleanup_injected_plugins EXIT
+
+if [ "${SBTIX_SBT_MAJOR}" = 2 ]; then
+  inject_project_plugin "project"
+  inject_project_plugin "project/project"
+fi
+
 if [ -n "@sourceRev@" ] && [ -n "@sourceNarHash@" ]; then
   export SBTIX_SOURCE_URL="@sourceUrl@"
   export SBTIX_SOURCE_REV="@sourceRev@"
@@ -98,24 +160,37 @@ if [ "$#" -gt 0 ]; then
     genNix)
       # Run genNix for the main build, reload into the meta-build to capture
       # plugin dependencies, then return to the main build.
-      set -- \
-        genNix \
-        "reload plugins" \
-        genNix \
-        "reload return"
+      if [ "${SBTIX_SBT_MAJOR}" = 2 ]; then
+        set -- "; genNix; reload plugins; genNix; reload return"
+      else
+        set -- \
+          genNix \
+          "reload plugins" \
+          genNix \
+          "reload return"
+      fi
       ;;
     genComposition)
       # Ensure both the project and meta-build repos are up-to-date before
       # emitting sbtix-generated.nix.
-      set -- \
-        genNix \
-        "reload plugins" \
-        genNix \
-        "reload return" \
-        genComposition
+      if [ "${SBTIX_SBT_MAJOR}" = 2 ]; then
+        set -- "; genNix; reload plugins; genNix; reload return; genComposition"
+      else
+        set -- \
+          genNix \
+          "reload plugins" \
+          genNix \
+          "reload return" \
+          genComposition
+      fi
       ;;
   esac
 fi
 
-exec @sbt@ "$@"
-
+set +e
+@sbt@ "$@"
+status=$?
+set -e
+trap - EXIT
+cleanup_injected_plugins
+exit "${status}"

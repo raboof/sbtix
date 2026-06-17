@@ -111,6 +111,14 @@ object SbtixPlugin extends AutoPlugin {
       .filter(_.nonEmpty)
   }
 
+  private def canonicalPluginJar(pathOrUrl: String): Option[File] =
+    Try {
+      val file =
+        if (pathOrUrl.startsWith("file:")) new File(new URI(pathOrUrl))
+        else new File(pathOrUrl)
+      file.getCanonicalFile
+    }.toOption
+
   private def resolveSbtixSourceBlock(pluginVersion: String): SourceBlock = {
     def fromEnvOrProp(envKey: String, propKey: String): Option[String] =
       sys.props.get(propKey).filter(_.nonEmpty).orElse(sys.env.get(envKey))
@@ -671,7 +679,8 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
       scalaBinaryVersion: String,
       extraIvyProps: Map[String, String] = Map.empty,
       lockPomDependencyArtifacts: Boolean = false,
-      lockEvictedModulePoms: Boolean = false
+      lockEvictedModulePoms: Boolean = false,
+      localArtifactSearchDirectories: Seq[File] = Seq.empty
   ) {
     private def fetcher(artifactClassifiers: Seq[String]): CoursierArtifactFetcher =
       new CoursierArtifactFetcher(
@@ -683,7 +692,8 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
         extraIvyProps = extraIvyProps,
         artifactClassifiers = artifactClassifiers,
         lockPomDependencyArtifacts = lockPomDependencyArtifacts,
-        lockEvictedModulePoms = lockEvictedModulePoms
+        lockEvictedModulePoms = lockEvictedModulePoms,
+        localArtifactSearchDirectories = localArtifactSearchDirectories
       )
 
     def resolveDependencies(fetch: DependencyFetch): FetchResult =
@@ -821,6 +831,14 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
         runFetches(fetches, config)
     }
 
+  private def lockSbtBootArtifacts(config: FetcherConfig, sbtVersion: String, sbtBinaryVersion: String): FetchResult =
+    sbtBootRootDependencies(sbtVersion, sbtBinaryVersion, config.log).map(_.moduleId) match {
+      case modules if modules.nonEmpty =>
+        config.lockModuleClasspath(modules, fetchIfMissing = true)
+      case _ =>
+        FetchResult.empty
+    }
+
   private def fetchPluginRepositories(
       pluginModuleIds: Set[ModuleID],
       updateReport: Option[UpdateReport],
@@ -832,6 +850,7 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
       scalaBinaryVersion: String,
       sbtBinaryVersion: String,
       artifactClassifiers: Seq[String],
+      localArtifactSearchDirectories: Seq[File],
       log: Logger
   ): Option[(String, Set[NixRepo], Set[NixArtifact])] = {
     pluginModuleIds.headOption.foreach(_ => logPluginModules(pluginModuleIds, log))
@@ -843,7 +862,8 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
         scalaVersion,
         scalaBinaryVersion,
         extraIvyProps = pluginIvyProperties(scalaBinaryVersion, sbtBinaryVersion),
-        lockEvictedModulePoms = true
+        lockEvictedModulePoms = true,
+        localArtifactSearchDirectories = localArtifactSearchDirectories
       )
     val resolvedPluginArtifacts = fetchPluginPlan(
       pluginFetchPlan(pluginModuleIds, updateReport, artifactClassifiers),
@@ -860,12 +880,7 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
         config.copy(lockPomDependencyArtifacts = true).lockModulePoms(pluginModuleIds)
       }
     val sbtBootArtifacts =
-      sbtBootRootDependencies(sbtVersion, sbtBinaryVersion, log).map(_.moduleId) match {
-        case modules if modules.nonEmpty =>
-          config.lockModuleClasspath(modules, fetchIfMissing = true)
-        case _ =>
-          FetchResult.empty
-      }
+      lockSbtBootArtifacts(config, sbtVersion, sbtBinaryVersion)
     val result = FetchResult.combine(Seq(resolvedPluginArtifacts, rootPomArtifacts, sbtBootArtifacts))
     if (result.hasLockedArtifacts) Some((scalaVersion, result.repos, result.artifacts))
     else None
@@ -937,6 +952,8 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
         scalafmtToolingDependencies(rootBaseDirectory, pluginModuleIds, log)
 
       val projectUpdateReport = update.value
+      val sbtBootArtifactDirectories =
+        appConfiguration.value.provider.mainClasspath().toSeq.flatMap(file => Option(file.getParentFile)).distinct
 
       val declaredProjectModules =
         filterLockableModules(
@@ -955,7 +972,17 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
       val toolingDependencies: Set[Dependency] =
         sbtToolingDependencies(scalaVer, log)
 
-      val fetcherConfig = FetcherConfig(log, projectResolvers, projectCredentials, scalaVer, scalaBinaryVersion.value)
+      val fetcherConfig =
+        FetcherConfig(
+          log,
+          projectResolvers,
+          projectCredentials,
+          scalaVer,
+          scalaBinaryVersion.value,
+          localArtifactSearchDirectories = sbtBootArtifactDirectories
+        )
+      val sbtBootArtifacts =
+        lockSbtBootArtifacts(fetcherConfig, sbtVer, sbtBinaryVersion.value)
       val fetchResult =
         FetchResult.combine(
           Seq(
@@ -967,7 +994,8 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
             runFetches(
               dependencyFetchPlan(toolingDependencies, scalafmtRuntimeDeps, sbtixArtifactClassifiers.value),
               fetcherConfig
-            )
+            ),
+            sbtBootArtifacts
           )
         )
 
@@ -987,6 +1015,7 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
           scalaBinaryVersion.value,
           sbtBinaryVersion.value,
           sbtixArtifactClassifiers.value,
+          sbtBootArtifactDirectories,
           log
         )
       
@@ -1141,8 +1170,12 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
       if (expectedJar.isEmpty || codePath.isEmpty) {
         sys.error("sbtix: unable to determine plugin jar path from environment/classpath")
       }
-      if (!codePath.contains(expectedJar)) {
-        log.error(s"[SBTIX_DEBUG genComposition] Loaded plugin jar $codePath does not match expected $expectedJar")
+      val codeJar = canonicalPluginJar(codePath)
+      val expectedCanonicalJar = canonicalPluginJar(expectedJar)
+      if (codeJar.isEmpty || expectedCanonicalJar.isEmpty || codeJar != expectedCanonicalJar) {
+        log.error(
+          s"[SBTIX_DEBUG genComposition] Loaded plugin jar $codePath (${codeJar.map(_.getPath).getOrElse("<unresolved>")}) does not match expected $expectedJar (${expectedCanonicalJar.map(_.getPath).getOrElse("<unresolved>")})"
+        )
         sys.error("sbtix: plugin jar mismatch; ensure sbtix wrapper is rebuilt and on PATH")
       }
 
