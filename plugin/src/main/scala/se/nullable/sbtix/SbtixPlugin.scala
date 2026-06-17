@@ -111,6 +111,14 @@ object SbtixPlugin extends AutoPlugin {
       .filter(_.nonEmpty)
   }
 
+  private def canonicalPluginJar(pathOrUrl: String): Option[File] =
+    Try {
+      val file =
+        if (pathOrUrl.startsWith("file:")) new File(new URI(pathOrUrl))
+        else new File(pathOrUrl)
+      file.getCanonicalFile
+    }.toOption
+
   private def resolveSbtixSourceBlock(pluginVersion: String): SourceBlock = {
     def fromEnvOrProp(envKey: String, propKey: String): Option[String] =
       sys.props.get(propKey).filter(_.nonEmpty).orElse(sys.env.get(envKey))
@@ -1162,8 +1170,12 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
       if (expectedJar.isEmpty || codePath.isEmpty) {
         sys.error("sbtix: unable to determine plugin jar path from environment/classpath")
       }
-      if (!codePath.contains(expectedJar)) {
-        log.error(s"[SBTIX_DEBUG genComposition] Loaded plugin jar $codePath does not match expected $expectedJar")
+      val codeJar = canonicalPluginJar(codePath)
+      val expectedCanonicalJar = canonicalPluginJar(expectedJar)
+      if (codeJar.isEmpty || expectedCanonicalJar.isEmpty || codeJar != expectedCanonicalJar) {
+        log.error(
+          s"[SBTIX_DEBUG genComposition] Loaded plugin jar $codePath (${codeJar.map(_.getPath).getOrElse("<unresolved>")}) does not match expected $expectedJar (${expectedCanonicalJar.map(_.getPath).getOrElse("<unresolved>")})"
+        )
         sys.error("sbtix: plugin jar mismatch; ensure sbtix wrapper is rebuilt and on PATH")
       }
 
