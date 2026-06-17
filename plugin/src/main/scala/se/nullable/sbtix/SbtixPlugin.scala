@@ -823,6 +823,14 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
         runFetches(fetches, config)
     }
 
+  private def lockSbtBootArtifacts(config: FetcherConfig, sbtVersion: String, sbtBinaryVersion: String): FetchResult =
+    sbtBootRootDependencies(sbtVersion, sbtBinaryVersion, config.log).map(_.moduleId) match {
+      case modules if modules.nonEmpty =>
+        config.lockModuleClasspath(modules, fetchIfMissing = true)
+      case _ =>
+        FetchResult.empty
+    }
+
   private def fetchPluginRepositories(
       pluginModuleIds: Set[ModuleID],
       updateReport: Option[UpdateReport],
@@ -864,12 +872,7 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
         config.copy(lockPomDependencyArtifacts = true).lockModulePoms(pluginModuleIds)
       }
     val sbtBootArtifacts =
-      sbtBootRootDependencies(sbtVersion, sbtBinaryVersion, log).map(_.moduleId) match {
-        case modules if modules.nonEmpty =>
-          config.lockModuleClasspath(modules, fetchIfMissing = true)
-        case _ =>
-          FetchResult.empty
-      }
+      lockSbtBootArtifacts(config, sbtVersion, sbtBinaryVersion)
     val result = FetchResult.combine(Seq(resolvedPluginArtifacts, rootPomArtifacts, sbtBootArtifacts))
     if (result.hasLockedArtifacts) Some((scalaVersion, result.repos, result.artifacts))
     else None
@@ -971,12 +974,7 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
           localArtifactSearchDirectories = sbtBootArtifactDirectories
         )
       val sbtBootArtifacts =
-        sbtBootRootDependencies(sbtVer, sbtBinaryVersion.value, log).map(_.moduleId) match {
-          case modules if modules.nonEmpty =>
-            fetcherConfig.lockModuleClasspath(modules, fetchIfMissing = true)
-          case _ =>
-            FetchResult.empty
-        }
+        lockSbtBootArtifacts(fetcherConfig, sbtVer, sbtBinaryVersion.value)
       val fetchResult =
         FetchResult.combine(
           Seq(
