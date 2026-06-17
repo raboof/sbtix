@@ -79,7 +79,7 @@ Add an input and expose the sbtix CLI in your dev shell:
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
     # Prefer a tag (or pinned commit) so the sbtix input is stable.
-    sbtix.url = "github:natural-transformation/sbtix/v1.2.0";
+    sbtix.url = "github:natural-transformation/sbtix/v1.2.1";
 
     # Optional: keep nixpkgs consistent across inputs.
     sbtix.inputs.nixpkgs.follows = "nixpkgs";

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.1
+
+### Fixed
+
+- Lock sbt 2 launcher boot artifacts from the sbt root POM classpath so sbt 2 projects can start in sandboxed/offline Nix builds.
+- Publish both sbt 1.x and sbt 2.x sbtix plugin artifacts in the bundled CLI wrapper.
+
 ## 1.2.0
 
 ### Added

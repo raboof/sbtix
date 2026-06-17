@@ -16,7 +16,7 @@ if [[ ! -x "${SBTIX_BIN}" ]]; then
 fi
 
 if [[ -d "${repo_root}/result/plugin-repo" ]]; then
-  test -f "${repo_root}/result/plugin-repo/se.nullable.sbtix/sbtix_sbt2_3/1.2.0/jars/sbtix_sbt2_3.jar"
+  test -f "${repo_root}/result/plugin-repo/se.nullable.sbtix/sbtix_sbt2_3/1.2.1/jars/sbtix_sbt2_3.jar"
 fi
 
 workdir="$(mktemp -d "${TMPDIR:-/tmp}/sbtix-sbt2-cli.XXXXXX")"
