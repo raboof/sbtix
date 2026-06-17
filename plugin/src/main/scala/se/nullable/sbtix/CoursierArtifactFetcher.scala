@@ -9,7 +9,6 @@ import java.nio.charset.StandardCharsets
 import java.util.Locale
 import java.nio.file.{Files => NioFiles}
 import java.util.concurrent.{ConcurrentSkipListSet, ExecutorService}
-import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.util.control.NonFatal
@@ -19,11 +18,11 @@ import sbt.{uri, Credentials, Logger, ModuleID, Resolver}
 import sbt.librarymanagement.{CrossVersion, FileRepository, MavenRepository, ModuleReport, PatternsBasedRepository, URLRepository, UpdateReport}
 
 import coursier.cache.{Cache, CacheDefaults, CacheLogger, CachePolicy, FileCache}
+import coursier.ResolutionExtensions
 import coursier.core.{Authentication => CAuthentication, Classifier, Configuration, Dependency => CDependency, Module => CModule, ModuleName, Organization, Publication, Repository, Resolution, Type, Extension}
 import coursier.core.ResolutionProcess
 import coursier.util.{Artifact => CArtifact, EitherT, Task}
 
-import lmcoursier.internal.shaded.coursier.core.{Authentication => SbtCoursierAuthentication}
 import lmcoursier.internal.Resolvers
 
 import se.nullable.sbtix.data.RoseTree
@@ -203,12 +202,37 @@ class CoursierArtifactFetcher(
 
   private val metaArtifactCollector = new ConcurrentSkipListSet[MetaArtifact]()
   private val pomModelCache = scala.collection.mutable.Map.empty[String, PomModel.Model]
-  private val pomAncestorCache = scala.collection.mutable.Map.empty[String, Set[NixArtifact]]
+
+  private final class PomTraversalState(initialSeen: Set[String] = Set.empty) {
+    private val seen = scala.collection.mutable.Set.empty[String] ++ initialSeen
+    private val classpathSeen = scala.collection.mutable.Set.empty[String]
+
+    def visit(pomFile: File, sourceUrl: Option[String], includeClasspathArtifacts: Boolean): Boolean = {
+      val keys = pomVisitKeys(pomFile, sourceUrl)
+      val metadataAlreadySeen = keys.exists(seen)
+      val classpathAlreadySeen = keys.exists(classpathSeen)
+      if (includeClasspathArtifacts && !classpathAlreadySeen) {
+        seen ++= keys
+        classpathSeen ++= keys
+        true
+      } else if (!includeClasspathArtifacts && !metadataAlreadySeen) {
+        seen ++= keys
+        true
+      } else false
+    }
+
+    def seenPom(url: String, file: File): Boolean =
+      pomVisitKeys(file, Some(url)).exists(seen)
+
+    def snapshot: Set[String] =
+      seen.toSet
+  }
+
   private val ivyLocalResolver: Resolver =
-    Resolver.file(
+    SbtCompat.ivyLocalResolver(
       "sbtix-ivy-local",
       new File(new File(sys.props("user.home"), ".ivy2"), "local")
-    )(Resolver.ivyStylePatterns)
+    )
 
   private val effectiveResolvers: Set[Resolver] =
     if (resolvers.exists(_.name == ivyLocalResolver.name)) resolvers else resolvers + ivyLocalResolver
@@ -242,6 +266,7 @@ class CoursierArtifactFetcher(
 
     val repoDescriptors = buildRepoDescriptors(effectiveResolvers)
     val nixRepos = repoDescriptors.map(_.repo).toSet
+    val pomTraversal = new PomTraversalState
 
     val (lockedArtifacts, providedArtifacts) =
       resolvedArtifacts.foldLeft((Set.empty[NixArtifact], Set.empty[ProvidedArtifact])) {
@@ -264,14 +289,14 @@ class CoursierArtifactFetcher(
           } else if (isMavenMetadataUrl(artifact.url)) {
             (lockedAcc, providedAcc)
           } else {
-            val expanded = fetchAndExpand(artifact, repoDescriptors, dependency)
+            val expanded = fetchAndExpand(artifact, repoDescriptors, pomTraversal)
             (lockedAcc ++ expanded, providedAcc)
           }
       }
 
     val resolvedUrls = resolvedArtifacts.map { case (_, artifact) => artifact.url }.toSet
 
-    val metaArtifacts = metaArtifactCollector.asScala.toSet
+    val metaArtifacts = SbtCompat.concurrentSetToSet(metaArtifactCollector)
       .filterNot(meta => resolvedUrls.contains(meta.artifactUrl))
       .filterNot(meta => isLocalIvyUrl(meta.artifactUrl))
       .filterNot(meta => isMavenMetadataUrl(meta.artifactUrl))
@@ -283,7 +308,7 @@ class CoursierArtifactFetcher(
           if (meta.artifactUrl.endsWith(".pom"))
             cachedFileForUrl(meta.artifactUrl)
               .filter(_.isFile)
-              .map(file => collectCachedPomAncestors(file, repoDescriptors))
+              .map(file => collectCachedPomAncestors(file, repoDescriptors, pomTraversal, sourceUrl = Some(meta.artifactUrl)))
               .getOrElse(Set.empty[NixArtifact])
           else Set.empty[NixArtifact]
         artifact ++ pomExtras
@@ -300,6 +325,7 @@ class CoursierArtifactFetcher(
   def fromUpdateReport(report: UpdateReport): (Set[NixRepo], Set[NixArtifact]) = {
     val repoDescriptors = buildRepoDescriptors(effectiveResolvers)
     val nixRepos = repoDescriptors.map(_.repo).toSet
+    val pomTraversal = new PomTraversalState
     val allModuleReports =
       report.configurations
         .flatMap(_.modules)
@@ -312,7 +338,7 @@ class CoursierArtifactFetcher(
       resolvedModuleReports.flatMap { moduleReport =>
         moduleReport.artifacts.flatMap { case (artifact, file) =>
           artifact.url.toSeq.flatMap { url =>
-            lockReportArtifact(url.toString, file, moduleReport.module, repoDescriptors)
+            lockReportArtifact(url.toString, file, moduleReport.module, repoDescriptors, pomTraversal)
           }
         }
       }
@@ -320,7 +346,7 @@ class CoursierArtifactFetcher(
     val modulePomArtifacts =
       metadataModuleReports.flatMap { moduleReport =>
         modulePomCandidates(moduleReport.module, repoDescriptors, fetchIfMissing = lockEvictedModulePoms).flatMap { case (url, file) =>
-          lockCachedArtifact(url, file, repoDescriptors) ++ collectCachedPomAncestors(file, repoDescriptors)
+          lockCachedArtifact(url, file, repoDescriptors) ++ collectCachedPomAncestors(file, repoDescriptors, pomTraversal, sourceUrl = Some(url))
         }
       }
 
@@ -340,10 +366,11 @@ class CoursierArtifactFetcher(
   def lockModulePoms(modules: Set[ModuleID], fetchIfMissing: Boolean = false): (Set[NixRepo], Set[NixArtifact]) = {
     val repoDescriptors = buildRepoDescriptors(effectiveResolvers)
     val nixRepos = repoDescriptors.map(_.repo).toSet
+    val pomTraversal = new PomTraversalState
     val artifacts =
       modules.flatMap(publicationVariants).flatMap { module =>
         modulePomCandidates(module, repoDescriptors, fetchIfMissing = fetchIfMissing).flatMap { case (url, file) =>
-          lockCachedArtifact(url, file, repoDescriptors) ++ collectCachedPomAncestors(file, repoDescriptors)
+          lockCachedArtifact(url, file, repoDescriptors) ++ collectCachedPomAncestors(file, repoDescriptors, pomTraversal, sourceUrl = Some(url))
         }
       }
 
@@ -478,16 +505,19 @@ class CoursierArtifactFetcher(
   }
 
   private def resolverToCoursierRepository(resolver: Resolver): Option[Repository] = {
-    val repoOpt = Resolvers.repository(
-      resolver = resolver,
-      ivyProperties = ivyProps,
-      log = logger,
-      authentication = authenticationFor(resolver),
-      classLoaders = Seq()
-    )
+    val repoOpt: Option[Any] =
+      Resolvers
+        .repository(
+          resolver = resolver,
+          ivyProperties = ivyProps,
+          log = logger,
+          authentication = authenticationFor(resolver),
+          classLoaders = Seq()
+        )
+      .asInstanceOf[Option[Any]]
 
-    /* lmcoursier 2.1.x now returns shaded repository implementations; bridge them back into
-     * public coursier.core.Repository so we can keep using the new API surface.
+    /* Widen at the lmcoursier boundary: sbt/lmcoursier combinations can return either public
+     * coursier repositories or shaded implementations that need bridging back into public types.
      */
     repoOpt.map {
       case repo: Repository => repo
@@ -854,7 +884,11 @@ class CoursierArtifactFetcher(
   }
 
   /** Download an artifact, emit its NixArtifact(s), and for POMs also emit parent and import-scope BOMs. */
-  private def fetchAndExpand(artifact: CArtifact, repoDescriptors: Seq[RepoDescriptor], dep: CDependency): Set[NixArtifact] = {
+  private def fetchAndExpand(
+      artifact: CArtifact,
+      repoDescriptors: Seq[RepoDescriptor],
+      pomTraversal: PomTraversalState
+  ): Set[NixArtifact] = {
     val base = downloadArtifact(artifact).map { file =>
       val artifactUrl = authenticatedArtifactUrl(artifact.url)
       val descriptor = descriptorForUrl(artifactUrl, repoDescriptors)
@@ -865,7 +899,7 @@ class CoursierArtifactFetcher(
 
     val pomExtras =
       if (artifact.url.endsWith(".pom"))
-        collectPomAncestors(artifact, repoDescriptors)
+        collectPomAncestors(artifact, repoDescriptors, pomTraversal)
       else Set.empty[NixArtifact]
 
     base ++ pomExtras
@@ -875,13 +909,14 @@ class CoursierArtifactFetcher(
       url: String,
       file: File,
       module: ModuleID,
-      repoDescriptors: Seq[RepoDescriptor]
+      repoDescriptors: Seq[RepoDescriptor],
+      pomTraversal: PomTraversalState
   ): Set[NixArtifact] =
     Option(url)
       .filter(shouldLockReportArtifact)
       .map { lockableUrl =>
         lockCachedArtifact(lockableUrl, file, repoDescriptors) ++
-          reportPomArtifacts(lockableUrl, file, module, repoDescriptors)
+          reportPomArtifacts(lockableUrl, file, module, repoDescriptors, pomTraversal)
       }
       .getOrElse(Set.empty)
 
@@ -905,14 +940,15 @@ class CoursierArtifactFetcher(
       url: String,
       file: File,
       module: ModuleID,
-      repoDescriptors: Seq[RepoDescriptor]
+      repoDescriptors: Seq[RepoDescriptor],
+      pomTraversal: PomTraversalState
   ): Set[NixArtifact] =
     url match {
       case pomUrl if pomUrl.endsWith(".pom") =>
-        collectCachedPomAncestors(file, repoDescriptors)
+        collectCachedPomAncestors(file, repoDescriptors, pomTraversal, sourceUrl = Some(pomUrl))
       case artifactUrl =>
         cachedMavenPom(module, artifactUrl, repoDescriptors).flatMap { case (pomUrl, pomFile) =>
-          lockCachedArtifact(pomUrl, pomFile, repoDescriptors) ++ collectCachedPomAncestors(pomFile, repoDescriptors)
+          lockCachedArtifact(pomUrl, pomFile, repoDescriptors) ++ collectCachedPomAncestors(pomFile, repoDescriptors, pomTraversal, sourceUrl = Some(pomUrl))
         }
     }
 
@@ -1008,7 +1044,7 @@ class CoursierArtifactFetcher(
     hostFromUrl(url).flatMap(credentialsForArtifactHost)
 
   private def credentialsForArtifactHost(host: String): Option[CAuthentication] =
-    Credentials.forHost(credentials.toSeq, host).map { c =>
+    SbtCompat.credentialForHost(credentials.toSeq, host).map { c =>
       CAuthentication(
         user = c.userName,
         passwordOpt = Some(c.passwd),
@@ -1024,7 +1060,7 @@ class CoursierArtifactFetcher(
     Try(new URI(url)).toOption
       .filter(uri => Option(uri.getUserInfo).isEmpty)
       .filter(uri => Option(uri.getScheme).exists(s => s == "http" || s == "https"))
-      .flatMap(uri => Option(uri.getHost).flatMap(host => Credentials.forHost(credentials.toSeq, host)))
+      .flatMap(uri => Option(uri.getHost).flatMap(host => SbtCompat.credentialForHost(credentials.toSeq, host)))
       .map { c =>
         val scheme = url.takeWhile(_ != ':')
         val prefix = s"$scheme://"
@@ -1084,39 +1120,53 @@ class CoursierArtifactFetcher(
   private def collectCachedPomAncestors(
       pomFile: File,
       repoDescriptors: Seq[RepoDescriptor],
-      seen: Set[String] = Set.empty,
+      traversal: PomTraversalState,
+      sourceUrl: Option[String],
       includeClasspathArtifacts: Boolean = lockPomDependencyArtifacts
   ): Set[NixArtifact] = {
-    val cacheKey = s"${pomFile.getCanonicalPath}|classpath=$includeClasspathArtifacts"
-    if (seen.isEmpty)
-      pomAncestorCache.getOrElseUpdate(cacheKey, collectCachedPomAncestorsUncached(pomFile, repoDescriptors, seen, includeClasspathArtifacts))
-    else
-      collectCachedPomAncestorsUncached(pomFile, repoDescriptors, seen, includeClasspathArtifacts)
+    collectCachedPomAncestorsUncached(pomFile, repoDescriptors, traversal, sourceUrl, includeClasspathArtifacts)
   }
 
   private def collectCachedPomAncestorsUncached(
       pomFile: File,
       repoDescriptors: Seq[RepoDescriptor],
-      seen: Set[String],
+      traversal: PomTraversalState,
+      sourceUrl: Option[String],
       includeClasspathArtifacts: Boolean
   ): Set[NixArtifact] = {
-    val pom = cachedPomModel(pomFile, repoDescriptors, seen)
-    val classpathArtifacts =
-      if (includeClasspathArtifacts) pom.classpathDeps.flatMap(dependencyLockCandidates).map((_, true))
-      else Set.empty[(PomModel.PomDep, Boolean)]
-    val candidates =
-      pom.parents.map((_, true)) ++
-        pom.importBoms.map((_, true)) ++
-        pom.metadataDeps.map((_, false)) ++
-        classpathArtifacts ++
-        pom.providedDeps.flatMap(dependencyLockCandidates).map((_, true))
-    candidates.flatMap { case (pomDep, fetchIfMissing) =>
-      pomDependencyCandidates(pomDep, repoDescriptors, fetchIfMissing).filterNot { case (url, _) => seen(url) }.flatMap { case (url, file) =>
+    if (!traversal.visit(pomFile, sourceUrl, includeClasspathArtifacts)) Set.empty
+    else {
+      val seen = traversal.snapshot
+      val pom = cachedPomModel(pomFile, repoDescriptors, seen)
+      val classpathArtifacts =
+        if (includeClasspathArtifacts) pom.classpathDeps.flatMap(dependencyLockCandidates).map((_, true))
+        else Set.empty[(PomModel.PomDep, Boolean)]
+      val candidates =
+        pom.parents.map((_, true)) ++
+          pom.importBoms.map((_, true)) ++
+          pom.metadataDeps.map((_, false)) ++
+          classpathArtifacts ++
+          pom.providedDeps.flatMap(dependencyLockCandidates).map((_, true))
+      candidates.flatMap { case (pomDep, fetchIfMissing) =>
+        pomDependencyCandidates(pomDep, repoDescriptors, fetchIfMissing).filterNot { case (url, file) => traversal.seenPom(url, file) }.flatMap { case (url, file) =>
           lockCachedArtifact(url, file, repoDescriptors) ++
-            (if (url.endsWith(".pom")) collectCachedPomAncestors(file, repoDescriptors, seen + url, includeClasspathArtifacts = false) else Set.empty)
-      }
-    }.toSet
+            (if (url.endsWith(".pom")) collectCachedPomAncestors(file, repoDescriptors, traversal, sourceUrl = Some(url), includeClasspathArtifacts = false) else Set.empty)
+        }
+      }.toSet
+    }
   }
+
+  private def pomVisitKeys(file: File, sourceUrl: Option[String]): Set[String] =
+    sourceUrl.map(pomUrlVisitKey).toSet + pomFileVisitKey(file)
+
+  private def pomUrlVisitKey(url: String): String =
+    s"url:${stripCredentials(url)}"
+
+  private def pomFileVisitKey(file: File): String =
+    s"file:${file.getCanonicalPath}"
+
+  private def seenPom(url: String, file: File, seen: Set[String]): Boolean =
+    seen(pomUrlVisitKey(url)) || seen(pomFileVisitKey(file))
 
   private def dependencyLockCandidates(dep: PomModel.PomDep): Set[PomModel.PomDep] = {
     val artifactExtension =
@@ -1156,9 +1206,9 @@ class CoursierArtifactFetcher(
     val parentModels =
       firstPass.parents.flatMap { parent =>
         pomDependencyCandidates(parent, repoDescriptors, fetchIfMissing = true)
-          .filterNot { case (url, _) => seen(url) }
+          .filterNot { case (url, file) => seenPom(url, file, seen) }
           .map { case (url, file) =>
-            cachedPomModel(file, repoDescriptors, seen + url)
+            cachedPomModel(file, repoDescriptors, seen + pomUrlVisitKey(url) + pomFileVisitKey(file))
           }
       }
     val inheritedProperties = parentModels.flatMap(_.properties).toMap
@@ -1219,7 +1269,7 @@ class CoursierArtifactFetcher(
     val credentialedAuthorities =
       hostWithPort.toSeq.flatMap { authority =>
         host.toSeq.flatMap { value =>
-          Credentials.forHost(credentials.toSeq, value).toSeq.flatMap { c =>
+          SbtCompat.credentialForHost(credentials.toSeq, value).toSeq.flatMap { c =>
             Seq(s"${c.userName}@$authority", s"${c.userName}:${c.passwd}@$authority")
           }
         }
@@ -1233,9 +1283,13 @@ class CoursierArtifactFetcher(
     URLEncoder.encode(authority, StandardCharsets.UTF_8.name).replace("+", "%20")
 
   /** Parse a POM and lock metadata needed for offline resolution. */
-  private def collectPomAncestors(artifact: CArtifact, repoDescriptors: Seq[RepoDescriptor]): Set[NixArtifact] = {
+  private def collectPomAncestors(
+      artifact: CArtifact,
+      repoDescriptors: Seq[RepoDescriptor],
+      pomTraversal: PomTraversalState
+  ): Set[NixArtifact] = {
     downloadArtifact(artifact)
-      .map(file => collectCachedPomAncestors(file, repoDescriptors))
+      .map(file => collectCachedPomAncestors(file, repoDescriptors, pomTraversal, sourceUrl = Some(artifact.url)))
       .getOrElse(Set.empty)
   }
 
@@ -1247,7 +1301,7 @@ class CoursierArtifactFetcher(
   private def computeSha256(file: File): String =
     NixArtifact.checksum(file)
 
-  private def authenticationFor(resolver: Resolver): Option[SbtCoursierAuthentication] = resolver match {
+  private def authenticationFor(resolver: Resolver): Option[SbtCompat.ResolverAuthentication] = resolver match {
     case m: MavenRepository =>
       hostFromUrl(m.root).flatMap(credentialsForSbtCoursierHost)
     case p: PatternsBasedRepository if p.patterns.artifactPatterns.nonEmpty =>
@@ -1260,11 +1314,11 @@ class CoursierArtifactFetcher(
   private def hostFromUrl(url: String): Option[String] =
     Try(new URI(url)).toOption.flatMap(uri => Option(uri.getHost))
 
-  private def credentialsForSbtCoursierHost(host: String): Option[SbtCoursierAuthentication] =
-    Credentials.forHost(credentials.toSeq, host).map { c =>
-      SbtCoursierAuthentication(
-        c.userName,
-        c.passwd,
+  private def credentialsForSbtCoursierHost(host: String): Option[SbtCompat.ResolverAuthentication] =
+    SbtCompat.credentialForHost(credentials.toSeq, host).map { c =>
+      SbtCompat.resolverAuthentication(
+        user = c.userName,
+        password = c.passwd,
         optional = true,
         realmOpt = Option(c.realm),
         httpsOnly = false,

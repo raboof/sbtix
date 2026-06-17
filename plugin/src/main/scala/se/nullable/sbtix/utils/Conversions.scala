@@ -1,6 +1,9 @@
 package se.nullable.sbtix.utils
 
 object Conversions {
+  private def fieldValue[A](target: Any, name: String): A =
+    target.getClass.getMethod(name).invoke(target).asInstanceOf[A]
+
   implicit def convert(auth: lmcoursier.definitions.Authentication): coursier.core.Authentication =
     coursier.core.Authentication(
       user = auth.user,
@@ -26,45 +29,26 @@ object Conversions {
      */
     val className = repository.getClass.getName
     if (className.endsWith("SbtMavenRepository")) {
-      val reflectiveRepo = repository.asInstanceOf[{
-        val root: String
-        val authentication: Option[Any]
-      }]
       coursier.maven.SbtMavenRepository(
-        reflectiveRepo.root,
-        reflectiveRepo.authentication.map(convertAuthentication)
+        fieldValue[String](repository, "root"),
+        fieldValue[Option[Any]](repository, "authentication").map(convertAuthentication)
       )
     } else if (className.endsWith("IvyRepository")) {
-      val reflectiveIvyRepo = repository.asInstanceOf[{
-        val pattern: Any
-        val metadataPatternOpt: Option[Any]
-        val changingOpt: Option[Boolean]
-        val withChecksums: Boolean
-        val withSignatures: Boolean
-        val withArtifacts: Boolean
-        val dropInfoAttributes: Boolean
-        val authentication: Option[Any]
-        val versionsCheckHasModule: Boolean
-      }]
       coursier.ivy.IvyRepository(
-        convertPattern(reflectiveIvyRepo.pattern),
-        reflectiveIvyRepo.metadataPatternOpt.map(convertPattern),
-        reflectiveIvyRepo.changingOpt,
-        reflectiveIvyRepo.withChecksums,
-        reflectiveIvyRepo.withSignatures,
-        reflectiveIvyRepo.withArtifacts,
-        reflectiveIvyRepo.dropInfoAttributes,
-        reflectiveIvyRepo.authentication.map(convertAuthentication),
-        reflectiveIvyRepo.versionsCheckHasModule
+        convertPattern(fieldValue[Any](repository, "pattern")),
+        fieldValue[Option[Any]](repository, "metadataPatternOpt").map(convertPattern),
+        fieldValue[Option[Boolean]](repository, "changingOpt"),
+        fieldValue[Boolean](repository, "withChecksums"),
+        fieldValue[Boolean](repository, "withSignatures"),
+        fieldValue[Boolean](repository, "withArtifacts"),
+        fieldValue[Boolean](repository, "dropInfoAttributes"),
+        fieldValue[Option[Any]](repository, "authentication").map(convertAuthentication),
+        fieldValue[Boolean](repository, "versionsCheckHasModule")
       )
     } else if (className.endsWith("MavenRepository")) {
-      val reflectiveMavenRepo = repository.asInstanceOf[{
-        val root: String
-        val authentication: Option[Any]
-      }]
       coursier.maven.MavenRepository(
-        reflectiveMavenRepo.root,
-        reflectiveMavenRepo.authentication.map(convertAuthentication)
+        fieldValue[String](repository, "root"),
+        fieldValue[Option[Any]](repository, "authentication").map(convertAuthentication)
       )
     } else {
       throw new IllegalStateException(s"Unhandled repository type: $className")
@@ -72,38 +56,29 @@ object Conversions {
   }
 
   private def convertAuthentication(authentication: Any): coursier.core.Authentication = {
-    val reflectiveAuth = authentication.asInstanceOf[{
-      val user: String
-      val passwordOpt: Option[String]
-      val httpHeaders: Seq[(String, String)]
-      val optional: Boolean
-      val realmOpt: Option[String]
-      val httpsOnly: Boolean
-      val passOnRedirect: Boolean
-    }]
     coursier.core.Authentication(
-      reflectiveAuth.user,
-      reflectiveAuth.passwordOpt,
-      reflectiveAuth.httpHeaders,
-      reflectiveAuth.optional,
-      reflectiveAuth.realmOpt,
-      reflectiveAuth.httpsOnly,
-      reflectiveAuth.passOnRedirect
+      fieldValue[String](authentication, "user"),
+      fieldValue[Option[String]](authentication, "passwordOpt"),
+      fieldValue[Seq[(String, String)]](authentication, "httpHeaders"),
+      fieldValue[Boolean](authentication, "optional"),
+      fieldValue[Option[String]](authentication, "realmOpt"),
+      fieldValue[Boolean](authentication, "httpsOnly"),
+      fieldValue[Boolean](authentication, "passOnRedirect")
     )
   }
 
   private def convertPattern(pattern: Any): coursier.ivy.Pattern = {
     def convertChunk(chunk: Any): coursier.ivy.Pattern.Chunk =
       if (chunk.getClass.getName.endsWith("Var"))
-        coursier.ivy.Pattern.Chunk.Var(chunk.asInstanceOf[{ val name: String }].name)
+        coursier.ivy.Pattern.Chunk.Var(fieldValue[String](chunk, "name"))
       else if (chunk.getClass.getName.endsWith("Opt"))
-        coursier.ivy.Pattern.Chunk.Opt(chunk.asInstanceOf[{ val content: Seq[Any] }].content.map(convertChunk))
+        coursier.ivy.Pattern.Chunk.Opt(fieldValue[Seq[Any]](chunk, "content").map(convertChunk))
       else if (chunk.getClass.getName.endsWith("Const"))
-        coursier.ivy.Pattern.Chunk.Const(chunk.asInstanceOf[{ val value: String }].value)
+        coursier.ivy.Pattern.Chunk.Const(fieldValue[String](chunk, "value"))
       else
         throw new IllegalArgumentException(s"Could not convert chunk $chunk of type ${chunk.getClass.getName}")
 
-    coursier.ivy.Pattern(pattern.asInstanceOf[{ val chunks: Seq[Any] }].chunks.map(convertChunk))
+    coursier.ivy.Pattern(fieldValue[Seq[Any]](pattern, "chunks").map(convertChunk))
   }
 
   implicit def convertOrganization(org: lmcoursier.definitions.Organization): coursier.core.Organization =

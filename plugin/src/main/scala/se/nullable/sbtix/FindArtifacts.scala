@@ -27,11 +27,11 @@ object FindArtifactsOfRepo {
       val is   = url.openConnection.getInputStream()
       val buf  = Array.ofDim[Byte](1048576)
       try {
-        var readLen: Int = 0
-        do {
+        var readLen: Int = is.read(buf)
+        while (readLen != -1) {
           hash.update(buf, 0, readLen)
           readLen = is.read(buf)
-        } while (readLen != -1)
+        }
       } finally {
         is.close()
       }

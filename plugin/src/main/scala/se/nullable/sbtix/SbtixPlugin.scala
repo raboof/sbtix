@@ -5,6 +5,7 @@ import sbt._
 import sbt.Keys._
 import sbt.librarymanagement.{ CrossVersion, Patterns, UpdateReport }
 import java.io.File
+import java.net.URI
 import java.nio.file.{Files, Path, Paths, StandardCopyOption}
 import java.nio.charset.StandardCharsets
 import java.util.Properties
@@ -278,17 +279,17 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
   
   object autoImport {
     // Main sbtix tasks
-    val sbtix = taskKey[Unit]("Download dependencies and generate nix expressions")
-    val sbtixGenerate = taskKey[BuildInputs]("Generate Nix expressions for project dependencies")
-    val sbtixGenerateFile = taskKey[File]("Generate Nix expressions to a file")
-    val sbtixBuildInputs = taskKey[BuildInputs]("Materialize a derivation of the build inputs (libraries) needed for this project")
-    val sbtixRegenerate = taskKey[Unit]("Regenerate nix expressions for dependencies")
-    val sbtixShowNixFile = taskKey[Unit]("Show the content of the generated Nix file")
-    val sbtixWriteNixFile = taskKey[File]("Create and write the nix expression to nix file")
+    @transient val sbtix = taskKey[Unit]("Download dependencies and generate nix expressions")
+    @transient val sbtixGenerate = taskKey[BuildInputs]("Generate Nix expressions for project dependencies")
+    @transient val sbtixGenerateFile = taskKey[File]("Generate Nix expressions to a file")
+    @transient val sbtixBuildInputs = taskKey[BuildInputs]("Materialize a derivation of the build inputs (libraries) needed for this project")
+    @transient val sbtixRegenerate = taskKey[Unit]("Regenerate nix expressions for dependencies")
+    @transient val sbtixShowNixFile = taskKey[Unit]("Show the content of the generated Nix file")
+    @transient val sbtixWriteNixFile = taskKey[File]("Create and write the nix expression to nix file")
     
     // Commands expected by tests
-    val genNix = taskKey[Unit]("Generate Nix expressions for dependencies")
-    val genComposition = taskKey[Unit]("Generate a Nix composition file")
+    @transient val genNix = taskKey[Unit]("Generate Nix expressions for dependencies")
+    @transient val genComposition = taskKey[Unit]("Generate a Nix composition file")
     
     val sbtixNixFile = settingKey[File]("The Nix file to generate")
     val sbtixRepository = settingKey[String]("URL of the repository to use")
@@ -725,11 +726,11 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
       Resolver.sbtPluginRepo("releases"),
       Resolver.url(
         "sbt-plugin-releases",
-        sbt.url("https://repo.scala-sbt.org/scalasbt/sbt-plugin-releases/")
+        URI.create("https://repo.scala-sbt.org/scalasbt/sbt-plugin-releases/").toURL
       )(Patterns(PluginIvyPattern)),
       Resolver.url(
         "artima-maven",
-        sbt.url("https://repo.artima.com/releases")
+        URI.create("https://repo.artima.com/releases").toURL
       )(Patterns(mavenPattern))
     )
   }
@@ -858,14 +859,18 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
     // Setting the default template for generated Nix content
     sbtixNixContentTemplate := generatedNixContentTemplate _,
     
-    sbtixBuildInputs := {
+    sbtixBuildInputs := SbtCompat.uncached {
       val log = streams.value.log
       log.info("Collecting build inputs for Nix...")
       
-      val deps = Classpaths.managedJars(Compile, classpathTypes.value, update.value).toSet
+      val compileModules =
+        update.value.configurations
+          .filter(_.configuration.name == Compile.name)
+          .flatMap(_.modules.map(_.module))
+          .toSet
       val filteredModules =
         filterLockableModules(
-          deps.flatMap(_.metadata.get(moduleID.key)),
+          compileModules,
           log,
           "sbtixBuildInputs"
         )
@@ -886,7 +891,7 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
       BuildInputs(scalaVer, sbtVer, fetchResult.repos.toSeq, fetchResult.artifacts, fetchResult.provided)
     },
     
-    sbtixGenerate := {
+    sbtixGenerate := SbtCompat.uncached {
       val log = streams.value.log
       log.info("Generating Nix expressions for dependencies...")
       
@@ -988,7 +993,7 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
       BuildInputs(scalaVer, sbtVer, repos.toSeq, artifacts, provided)
     },
     
-    sbtixGenerateFile := {
+    sbtixGenerateFile := SbtCompat.uncached {
       val buildInputs = sbtixGenerate.value
       val file = new File(new File(baseDirectory.value, "nix"), "sbtix.nix").getAbsoluteFile
       
@@ -1003,18 +1008,18 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
     },
     
     // Backward compatibility task
-    sbtix := {
+    sbtix := SbtCompat.uncached {
       sbtixGenerate.value
       ()
     },
     
     // Commands for test scripts - map to the main tasks
-    genNix := {
+    genNix := SbtCompat.uncached {
       sbtixGenerate.value
       ()
     },
     
-    genComposition := {
+    genComposition := SbtCompat.uncached {
       val log = streams.value.log
       log.info("Generating Nix composition file for project...")
 
@@ -1289,14 +1294,13 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
       }
     },
     
-    sbtixRegenerate := Def.taskDyn {
-      val _ = clean.value
-      Def.task {
-        val _ = sbtixGenerate.value
-      }
-    }.value,
+    sbtixRegenerate := SbtCompat.uncached {
+      clean.value
+      sbtixGenerate.value
+      ()
+    },
     
-    sbtixShowNixFile := {
+    sbtixShowNixFile := SbtCompat.uncached {
       val log = streams.value.log
       val nixFile = new File(baseDirectory.value, "repo.nix")
       if (nixFile.exists()) {
@@ -1307,7 +1311,7 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
       }
     },
     
-    sbtixWriteNixFile := {
+    sbtixWriteNixFile := SbtCompat.uncached {
       val log = streams.value.log
       val inputs = sbtixBuildInputs.value
       
