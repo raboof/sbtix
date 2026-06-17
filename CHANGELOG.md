@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.2
+
+### Fixed
+
+- Load the sbt 2.x plugin artifact automatically from the bundled CLI wrapper while preserving the existing sbt 1.x wrapper path.
+- Compare loaded sbtix plugin jars by canonical file path so generated compositions work when the wrapper exposes the in-store plugin through Ivy local.
+
 ## 1.2.1
 
 ### Fixed
