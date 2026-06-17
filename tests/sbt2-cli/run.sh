@@ -19,10 +19,11 @@ if [[ -d "${repo_root}/result/plugin-repo" ]]; then
   test -f "${repo_root}/result/plugin-repo/se.nullable.sbtix/sbtix_sbt2_3/1.2.1/jars/sbtix_sbt2_3.jar"
 fi
 
-workdir="$(mktemp -d "${TMPDIR:-/tmp}/sbtix-sbt2-cli.XXXXXX")"
+workdir="$(mktemp -d "${SBTIX_TEST_TMPDIR:-/tmp}/sbtix-sbt2-cli.XXXXXX")"
 trap 'rm -rf "${workdir}"' EXIT
 
 mkdir -p "${workdir}/project"
+mkdir -p "${workdir}/home"
 cat > "${workdir}/project/build.properties" <<'EOF'
 sbt.version=2.0.0
 EOF
@@ -37,5 +38,12 @@ EOF
 
 (
   cd "${workdir}"
+  export HOME="${workdir}/home"
   "${SBTIX_BIN}" --error "show sbtVersion"
+  "${SBTIX_BIN}" genNix
+
+  test -f repo.nix
+  test -f project/repo.nix
+  grep -q 'org/scala-sbt/sbt/2.0.0/sbt-2.0.0.jar' project/repo.nix
+  grep -q 'org/scala-sbt/main_3/2.0.0/main_3-2.0.0.jar' project/repo.nix
 )

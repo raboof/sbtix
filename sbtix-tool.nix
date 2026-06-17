@@ -17,8 +17,14 @@ let
     version = pluginVersion;
   };
 
-  sbtixPluginJarPath =
+  sbtixPluginRepoOrgPath =
+    "${sbtixPluginRepo}/plugin-repo/se.nullable.sbtix";
+
+  sbtixPluginJarPathSbt1 =
     "${sbtixPluginRepo}/plugin-repo/se.nullable.sbtix/sbtix/scala_2.12/sbt_1.0/${pluginVersion}/jars/sbtix.jar";
+
+  sbtixPluginJarPathSbt2 =
+    "${sbtixPluginRepo}/plugin-repo/se.nullable.sbtix/sbtix_sbt2_3/${pluginVersion}/jars/sbtix_sbt2_3.jar";
 
   sbtixNix = writeText "sbtix.nix" (builtins.replaceStrings
     [ "\${plugin-version}" "{{PLUGIN_BOOTSTRAP_SNIPPET}}" ]
@@ -61,7 +67,9 @@ let
     substitute ${./src/sbtix.sh} $out/bin/sbtix \
       --replace @shell@ ${runtimeShell} \
       --replace @plugin@ ${pluginsSbtix} \
-      --replace @pluginJar@ ${sbtixPluginJarPath} \
+      --replace @pluginRepoOrg@ ${sbtixPluginRepoOrgPath} \
+      --replace @pluginJarSbt1@ ${sbtixPluginJarPathSbt1} \
+      --replace @pluginJarSbt2@ ${sbtixPluginJarPathSbt2} \
       --replace @sbt@ ${sbt}/bin/sbt \
       --replace @sourceRev@ "${sourceRev}" \
       --replace @sourceNarHash@ "${sourceNarHash}" \

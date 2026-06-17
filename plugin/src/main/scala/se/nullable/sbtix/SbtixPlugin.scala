@@ -671,7 +671,8 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
       scalaBinaryVersion: String,
       extraIvyProps: Map[String, String] = Map.empty,
       lockPomDependencyArtifacts: Boolean = false,
-      lockEvictedModulePoms: Boolean = false
+      lockEvictedModulePoms: Boolean = false,
+      localArtifactSearchDirectories: Seq[File] = Seq.empty
   ) {
     private def fetcher(artifactClassifiers: Seq[String]): CoursierArtifactFetcher =
       new CoursierArtifactFetcher(
@@ -683,7 +684,8 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
         extraIvyProps = extraIvyProps,
         artifactClassifiers = artifactClassifiers,
         lockPomDependencyArtifacts = lockPomDependencyArtifacts,
-        lockEvictedModulePoms = lockEvictedModulePoms
+        lockEvictedModulePoms = lockEvictedModulePoms,
+        localArtifactSearchDirectories = localArtifactSearchDirectories
       )
 
     def resolveDependencies(fetch: DependencyFetch): FetchResult =
@@ -832,6 +834,7 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
       scalaBinaryVersion: String,
       sbtBinaryVersion: String,
       artifactClassifiers: Seq[String],
+      localArtifactSearchDirectories: Seq[File],
       log: Logger
   ): Option[(String, Set[NixRepo], Set[NixArtifact])] = {
     pluginModuleIds.headOption.foreach(_ => logPluginModules(pluginModuleIds, log))
@@ -843,7 +846,8 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
         scalaVersion,
         scalaBinaryVersion,
         extraIvyProps = pluginIvyProperties(scalaBinaryVersion, sbtBinaryVersion),
-        lockEvictedModulePoms = true
+        lockEvictedModulePoms = true,
+        localArtifactSearchDirectories = localArtifactSearchDirectories
       )
     val resolvedPluginArtifacts = fetchPluginPlan(
       pluginFetchPlan(pluginModuleIds, updateReport, artifactClassifiers),
@@ -937,6 +941,8 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
         scalafmtToolingDependencies(rootBaseDirectory, pluginModuleIds, log)
 
       val projectUpdateReport = update.value
+      val sbtBootArtifactDirectories =
+        appConfiguration.value.provider.mainClasspath().toSeq.flatMap(file => Option(file.getParentFile)).distinct
 
       val declaredProjectModules =
         filterLockableModules(
@@ -955,7 +961,22 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
       val toolingDependencies: Set[Dependency] =
         sbtToolingDependencies(scalaVer, log)
 
-      val fetcherConfig = FetcherConfig(log, projectResolvers, projectCredentials, scalaVer, scalaBinaryVersion.value)
+      val fetcherConfig =
+        FetcherConfig(
+          log,
+          projectResolvers,
+          projectCredentials,
+          scalaVer,
+          scalaBinaryVersion.value,
+          localArtifactSearchDirectories = sbtBootArtifactDirectories
+        )
+      val sbtBootArtifacts =
+        sbtBootRootDependencies(sbtVer, sbtBinaryVersion.value, log).map(_.moduleId) match {
+          case modules if modules.nonEmpty =>
+            fetcherConfig.lockModuleClasspath(modules, fetchIfMissing = true)
+          case _ =>
+            FetchResult.empty
+        }
       val fetchResult =
         FetchResult.combine(
           Seq(
@@ -967,7 +988,8 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
             runFetches(
               dependencyFetchPlan(toolingDependencies, scalafmtRuntimeDeps, sbtixArtifactClassifiers.value),
               fetcherConfig
-            )
+            ),
+            sbtBootArtifacts
           )
         )
 
@@ -987,6 +1009,7 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
           scalaBinaryVersion.value,
           sbtBinaryVersion.value,
           sbtixArtifactClassifiers.value,
+          sbtBootArtifactDirectories,
           log
         )
       
