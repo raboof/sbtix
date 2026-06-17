@@ -66,6 +66,9 @@ jobs:
       - name: Run scripted Scala 3 test
         run: nix develop . --command bash -lc 'cd plugin && sbt "scripted sbtix/scala3"'
 
+      - name: Run scripted sbt 2 boot jars test
+        run: nix develop . --command bash -lc 'cd plugin && sbt "++3.8.4" "scripted sbtix/sbt2-boot-jars"'
+
   nix:
     name: Nix build and integration (${{ matrix.runner }})
     runs-on: ${{ matrix.runner }}
@@ -97,6 +100,7 @@ jobs:
           nix develop . --command bash -lc '
             set -euo pipefail
             export PATH="$PWD/result/bin:$PATH"
+            ./tests/sbt2-cli/run.sh
             ./tests/multi-build/run.sh
             ./tests/template-generation/run.sh
           '

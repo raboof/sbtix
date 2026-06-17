@@ -380,6 +380,48 @@ class CoursierArtifactFetcher(
     (nixRepos, artifacts)
   }
 
+  def lockModuleClasspath(modules: Set[ModuleID], fetchIfMissing: Boolean = false): (Set[NixRepo], Set[NixArtifact]) = {
+    if (modules.isEmpty) (Set.empty[NixRepo], Set.empty[NixArtifact])
+    else {
+      val repoDescriptors = buildRepoDescriptors(effectiveResolvers)
+      val nixRepos = repoDescriptors.map(_.repo).toSet
+      val pomTraversal = new PomTraversalState
+      val artifacts =
+        modules.flatMap(publicationVariants).flatMap { module =>
+          modulePomCandidates(module, repoDescriptors, fetchIfMissing = fetchIfMissing).flatMap { case (url, file) =>
+            lockCachedArtifact(url, file, repoDescriptors) ++
+              moduleArtifactCandidates(module, repoDescriptors, fetchIfMissing = fetchIfMissing).flatMap { case (artifactUrl, artifactFile) =>
+                lockCachedArtifact(artifactUrl, artifactFile, repoDescriptors)
+              } ++
+              collectCachedPomAncestors(
+                file,
+                repoDescriptors,
+                pomTraversal,
+                sourceUrl = Some(url),
+                includeClasspathArtifacts = true,
+                recursiveClasspathArtifacts = true
+              )
+          }
+        }
+
+      SbtixDebug.info(logger) {
+        s"[SBTIX_DEBUG] Locked ${artifacts.size} module classpath artifacts"
+      }
+      (nixRepos, artifacts)
+    }
+  }
+
+  private def moduleArtifactCandidates(
+      module: ModuleID,
+      repoDescriptors: Seq[RepoDescriptor],
+      fetchIfMissing: Boolean
+  ): Set[(String, File)] =
+    pomDependencyCandidates(
+      PomModel.PomDep(module.organization, resolveModuleName(module), module.revision, `type` = "jar"),
+      repoDescriptors,
+      fetchIfMissing
+    )
+
   private def toCoursierDependency(dep: SbtixDependency): CDependency = {
     val modId = dep.moduleId
     val resolvedName = resolveModuleName(modId)
@@ -1122,9 +1164,17 @@ class CoursierArtifactFetcher(
       repoDescriptors: Seq[RepoDescriptor],
       traversal: PomTraversalState,
       sourceUrl: Option[String],
-      includeClasspathArtifacts: Boolean = lockPomDependencyArtifacts
+      includeClasspathArtifacts: Boolean = lockPomDependencyArtifacts,
+      recursiveClasspathArtifacts: Boolean = false
   ): Set[NixArtifact] = {
-    collectCachedPomAncestorsUncached(pomFile, repoDescriptors, traversal, sourceUrl, includeClasspathArtifacts)
+    collectCachedPomAncestorsUncached(
+      pomFile,
+      repoDescriptors,
+      traversal,
+      sourceUrl,
+      includeClasspathArtifacts,
+      recursiveClasspathArtifacts
+    )
   }
 
   private def collectCachedPomAncestorsUncached(
@@ -1132,7 +1182,8 @@ class CoursierArtifactFetcher(
       repoDescriptors: Seq[RepoDescriptor],
       traversal: PomTraversalState,
       sourceUrl: Option[String],
-      includeClasspathArtifacts: Boolean
+      includeClasspathArtifacts: Boolean,
+      recursiveClasspathArtifacts: Boolean
   ): Set[NixArtifact] = {
     if (!traversal.visit(pomFile, sourceUrl, includeClasspathArtifacts)) Set.empty
     else {
@@ -1149,8 +1200,18 @@ class CoursierArtifactFetcher(
           pom.providedDeps.flatMap(dependencyLockCandidates).map((_, true))
       candidates.flatMap { case (pomDep, fetchIfMissing) =>
         pomDependencyCandidates(pomDep, repoDescriptors, fetchIfMissing).filterNot { case (url, file) => traversal.seenPom(url, file) }.flatMap { case (url, file) =>
-          lockCachedArtifact(url, file, repoDescriptors) ++
-            (if (url.endsWith(".pom")) collectCachedPomAncestors(file, repoDescriptors, traversal, sourceUrl = Some(url), includeClasspathArtifacts = false) else Set.empty)
+          val transitivePomArtifacts =
+            if (url.endsWith(".pom"))
+              collectCachedPomAncestors(
+                file,
+                repoDescriptors,
+                traversal,
+                sourceUrl = Some(url),
+                includeClasspathArtifacts = includeClasspathArtifacts && recursiveClasspathArtifacts,
+                recursiveClasspathArtifacts = recursiveClasspathArtifacts
+              )
+            else Set.empty[NixArtifact]
+          lockCachedArtifact(url, file, repoDescriptors) ++ transitivePomArtifacts
         }
       }.toSet
     }

@@ -171,6 +171,7 @@ object SbtixPlugin extends AutoPlugin {
              |
              |  sbtixPluginRepos = [
              |    (import (sbtixSource + "/plugin/repo.nix"))
+             |    (import (sbtixSource + "/plugin/repo-sbt2.nix"))
              |    (import (sbtixSource + "/plugin/project/repo.nix"))
              |    (import (sbtixSource + "/plugin/nix-exprs/manual-repo.nix"))
              |  ];
@@ -202,6 +203,7 @@ object SbtixPlugin extends AutoPlugin {
                  |
                  |  sbtixPluginRepos = [
                  |    (import (sbtixSource + "/plugin/repo.nix"))
+                 |    (import (sbtixSource + "/plugin/repo-sbt2.nix"))
                  |    (import (sbtixSource + "/plugin/project/repo.nix"))
                  |    (import (sbtixSource + "/plugin/nix-exprs/manual-repo.nix"))
                  |  ];
@@ -541,6 +543,17 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
       Dependency(bridge)
     }.toSet
 
+  private def sbtBootRootDependencies(sbtVersion: String, sbtBinaryVersion: String, log: Logger): Set[Dependency] =
+    if (!sbtBinaryVersion.startsWith("2")) Set.empty[Dependency]
+    else {
+      val modules = Seq(ModuleID("org.scala-sbt", "sbt", sbtVersion))
+      SbtixDebug.info(log) {
+        val coordinates = modules.map(module => s"${module.organization}:${module.name}:${module.revision}").mkString(", ")
+        s"[SBTIX_DEBUG] Adding sbt boot roots for offline sbt 2 startup: $coordinates"
+      }
+      modules.map(Dependency(_)).toSet
+    }
+
   private val ScalafmtConfigVersion = """(?m)^\s*version\s*=\s*"?([^"\s#]+)"?\s*(?:#.*)?$""".r
 
   private def isSbtScalafmtPlugin(module: ModuleID): Boolean =
@@ -681,6 +694,9 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
 
     def lockModulePoms(modules: Set[ModuleID], fetchIfMissing: Boolean = false): FetchResult =
       FetchResult.fromLocked(fetcher(Seq.empty[String]).lockModulePoms(modules, fetchIfMissing))
+
+    def lockModuleClasspath(modules: Set[ModuleID], fetchIfMissing: Boolean = false): FetchResult =
+      FetchResult.fromLocked(fetcher(Seq.empty[String]).lockModuleClasspath(modules, fetchIfMissing))
   }
 
   private[sbtix] sealed trait PluginFetchPlan
@@ -811,6 +827,7 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
       pluginResolvers: Set[Resolver],
       projectResolvers: Set[Resolver],
       credentials: Set[Credentials],
+      sbtVersion: String,
       scalaVersion: String,
       scalaBinaryVersion: String,
       sbtBinaryVersion: String,
@@ -842,7 +859,14 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
         // transitive POM as a new classpath root.
         config.copy(lockPomDependencyArtifacts = true).lockModulePoms(pluginModuleIds)
       }
-    val result = FetchResult.combine(Seq(resolvedPluginArtifacts, rootPomArtifacts))
+    val sbtBootArtifacts =
+      sbtBootRootDependencies(sbtVersion, sbtBinaryVersion, log).map(_.moduleId) match {
+        case modules if modules.nonEmpty =>
+          config.lockModuleClasspath(modules, fetchIfMissing = true)
+        case _ =>
+          FetchResult.empty
+      }
+    val result = FetchResult.combine(Seq(resolvedPluginArtifacts, rootPomArtifacts, sbtBootArtifacts))
     if (result.hasLockedArtifacts) Some((scalaVersion, result.repos, result.artifacts))
     else None
   }
@@ -958,6 +982,7 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
           pluginData.resolvers.map(_.toSet).getOrElse(Set.empty[Resolver]),
           projectResolvers,
           projectCredentials,
+          sbtVer,
           scalaVer,
           scalaBinaryVersion.value,
           sbtBinaryVersion.value,
