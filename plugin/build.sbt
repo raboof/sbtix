@@ -35,7 +35,7 @@ pluginCrossBuild / sbtVersion := {
 
 name         := "sbtix"
 organization := "se.nullable.sbtix"
-version      := "1.1.1"
+version      := "1.2.0"
 
 publishTo := {
   if (isSnapshot.value) Some(Resolver.sonatypeCentralSnapshots)

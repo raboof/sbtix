@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.2.0
+
+### Added
+
+- Cross-build the sbtix plugin for sbt 1.x / Scala 2.12 and sbt 2.x / Scala 3.
+- Add sbt-version-specific compatibility shims for APIs that differ between sbt 1 and sbt 2.
+
+### Changed
+
+- Keep sbt plugin resolver, credential, and POM traversal handling compatible with both sbt lines.
+- Preserve the existing sbt 1.x artifact layout and generated bootstrap behavior for current users.
+
 ## 1.1.1
 
 ### Fixed
