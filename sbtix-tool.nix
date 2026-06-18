@@ -63,6 +63,7 @@ let
 
   generatedIdePluginCompatSbt = writeText "sbtix-generated-ide-plugin-compat.sbt" ''
     val sbtixGeneratedIdePluginModules = Set(
+      "ch.epfl.scala" -> "sbt-bloop",
       "org.scalameta" -> "sbt-metals",
       "com.github.sbt" -> "sbt-jdi-tools",
     )

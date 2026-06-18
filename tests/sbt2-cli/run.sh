@@ -88,6 +88,12 @@ done
 
 # Some Metals-generated plugin files can point at plugins that do not publish
 # sbt 2 artifacts. These files are not needed while sbtix is locking the build.
+unsupported_bloop_file="${metals_project}/project/project/project/project/metals.sbt"
+mkdir -p "$(dirname "${unsupported_bloop_file}")"
+cat > "${unsupported_bloop_file}" <<'EOF'
+addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % "2.0.17")
+EOF
+
 unsupported_metals_file="${metals_project}/project/project/project/project/project/metals.sbt"
 mkdir -p "$(dirname "${unsupported_metals_file}")"
 cat > "${unsupported_metals_file}" <<'EOF'
