@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.5
+
+### Fixed
+
+- Keep the sbt 2.x wrapper compatible with generated Bloop plugin files that reference versions without sbt 2 artifacts.
+
 ## 1.2.4
 
 ### Fixed
