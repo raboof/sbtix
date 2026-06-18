@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.3
+
+### Fixed
+
+- Keep the sbt 2.x wrapper compatible with generated Metals/Bloop plugin files in recursive meta-builds.
+- Resolve the sbt 2.x plugin's uPickle dependency on the Scala 2.13 axis to avoid mixed Scala 3 / Scala 2.13 plugin dependency conflicts.
+
 ## 1.2.2
 
 ### Fixed

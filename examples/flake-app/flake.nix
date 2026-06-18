@@ -3,7 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    sbtix.url = "github:natural-transformation/sbtix/v1.2.2";
+    sbtix.url = "github:natural-transformation/sbtix/v1.2.3";
     sbtix.inputs.nixpkgs.follows = "nixpkgs";
   };
 
