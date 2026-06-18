@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.6
+
+### Fixed
+
+- Preserve original relocated POM metadata needed for offline sbt resolution after Coursier resolves the replacement artifacts.
+
 ## 1.2.5
 
 ### Fixed

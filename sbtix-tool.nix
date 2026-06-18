@@ -2,7 +2,7 @@
 , jdk, jre, sbt, selfSourceInfo ? {}
 }:
 let
-  version = "1.2.5";
+  version = "1.2.6";
   versionSnapshotSuffix = "";
   pluginVersion = "${version}${versionSnapshotSuffix}";
 
