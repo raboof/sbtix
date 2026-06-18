@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.4
+
+### Fixed
+
+- Keep the sbt 2.x wrapper compatible with generated Metals plugin files that reference IDE-only plugins without sbt 2 artifacts.
+
 ## 1.2.3
 
 ### Fixed
