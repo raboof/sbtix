@@ -434,30 +434,6 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
     ModuleID(organization, rawModule, version).withExtraAttributes(attrs)
   }
 
-  private def moduleKeys(module: ModuleID, scalaVersion: String, scalaBinaryVersion: String): Set[(String, String, String)] = {
-    val resolvedName =
-      CrossVersion(module.crossVersion, scalaVersion, scalaBinaryVersion)
-        .map(applyFn => applyFn(module.name))
-        .getOrElse(module.name)
-    Set(module.name, resolvedName).map(name => (module.organization, name, module.revision))
-  }
-
-  private[sbtix] def evictedDeclaredModules(
-      declaredModules: Set[ModuleID],
-      report: UpdateReport,
-      scalaVersion: String,
-      scalaBinaryVersion: String
-  ): Set[ModuleID] = {
-    val evictedKeys =
-      report.configurations
-        .flatMap(_.modules)
-        .filter(_.evicted)
-        .flatMap(moduleReport => moduleKeys(moduleReport.module, scalaVersion, scalaBinaryVersion))
-        .toSet
-
-    declaredModules.filter(module => moduleKeys(module, scalaVersion, scalaBinaryVersion).exists(evictedKeys))
-  }
-
   private def parseSbtPluginLine(line: String, scalaBinary: String, sbtBinary: String): Option[ModuleID] = {
     val trimmed = line.trim
     trimmed match {
@@ -961,10 +937,6 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
           log,
           "sbtixGenerate"
         ).toSet
-      val evictedDeclaredProjectModules =
-        evictedDeclaredModules(declaredProjectModules, projectUpdateReport, scalaVer, scalaBinaryVersion.value)
-      val nonEvictedDeclaredProjectModules =
-        declaredProjectModules -- evictedDeclaredProjectModules
 
       // sbt itself downloads some "tooling" artifacts during compilation, even
       // when they are not declared as normal project/library dependencies. Lock
@@ -981,16 +953,17 @@ ln -sf ivy.xml $$ivyDir/ivys/ivy-$version.xml"""
           scalaBinaryVersion.value,
           localArtifactSearchDirectories = sbtBootArtifactDirectories
         )
+      val updateReportFetcherConfig =
+        // Relocated or evicted modules can disappear from the final classpath while
+        // their original POM metadata is still needed to replay resolution offline.
+        fetcherConfig.copy(lockEvictedModulePoms = true)
       val sbtBootArtifacts =
         lockSbtBootArtifacts(fetcherConfig, sbtVer, sbtBinaryVersion.value)
       val fetchResult =
         FetchResult.combine(
           Seq(
-            fetcherConfig.lockUpdateReport(projectUpdateReport, sbtixArtifactClassifiers.value),
-            fetcherConfig.lockModulePoms(nonEvictedDeclaredProjectModules),
-            // Declared roots may be evicted from the final classpath, but sbt still
-            // resolves their original POMs before applying eviction.
-            fetcherConfig.lockModulePoms(evictedDeclaredProjectModules, fetchIfMissing = true),
+            updateReportFetcherConfig.lockUpdateReport(projectUpdateReport, sbtixArtifactClassifiers.value),
+            fetcherConfig.lockModulePoms(declaredProjectModules),
             runFetches(
               dependencyFetchPlan(toolingDependencies, scalafmtRuntimeDeps, sbtixArtifactClassifiers.value),
               fetcherConfig

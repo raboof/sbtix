@@ -1,0 +1,8 @@
+# Reproduces a PairTime/Pulsar failure where sbt needs a transitive original
+# relocated Bouncy Castle POM during offline Nix resolution, even though the
+# final resolved classpath uses the non-relocated bcprov-jdk18on artifacts.
+> sbtixGenerate
+$ exists repo.nix
+$ exec grep -q 'org/apache/pulsar/bouncy-castle-bc/4.0.5/bouncy-castle-bc-4.0.5.pom' repo.nix
+$ exec grep -q 'org/bouncycastle/bcprov-jdk18on/1.78.1/bcprov-jdk18on-1.78.1.jar' repo.nix
+$ exec grep -q 'org/bouncycastle/bcprov-ext-jdk18on/1.78.1/bcprov-ext-jdk18on-1.78.1.pom' repo.nix
