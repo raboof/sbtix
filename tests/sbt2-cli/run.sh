@@ -19,31 +19,71 @@ if [[ -d "${repo_root}/result/plugin-repo" ]]; then
   test -f "${repo_root}/result/plugin-repo/se.nullable.sbtix/sbtix_sbt2_3/1.2.2/jars/sbtix_sbt2_3.jar"
 fi
 
-workdir="$(mktemp -d "${SBTIX_TEST_TMPDIR:-/tmp}/sbtix-sbt2-cli.XXXXXX")"
-trap 'rm -rf "${workdir}"' EXIT
+workroot="$(mktemp -d "${SBTIX_TEST_TMPDIR:-/tmp}/sbtix-sbt2-cli.XXXXXX")"
+trap 'rm -rf "${workroot}"' EXIT
 
-mkdir -p "${workdir}/project"
-mkdir -p "${workdir}/home"
-cat > "${workdir}/project/build.properties" <<'EOF'
+create_project() {
+  local name="$1"
+  local project_dir="${workroot}/${name}"
+
+  mkdir -p "${project_dir}/project" "${project_dir}/home"
+  cat > "${project_dir}/project/build.properties" <<'EOF'
 sbt.version=2.0.0
 EOF
-cat > "${workdir}/build.sbt" <<'EOF'
+  cat > "${project_dir}/build.sbt" <<EOF
 ThisBuild / scalaVersion := "3.7.4"
 
 lazy val root = (project in file("."))
   .settings(
-    name := "sbtix-sbt2-cli-smoke"
+    name := "${name}"
   )
 EOF
 
-(
-  cd "${workdir}"
-  export HOME="${workdir}/home"
-  "${SBTIX_BIN}" --error "show sbtVersion"
-  "${SBTIX_BIN}" genNix
+  printf '%s\n' "${project_dir}"
+}
 
-  test -f repo.nix
-  test -f project/repo.nix
-  grep -q 'org/scala-sbt/sbt/2.0.0/sbt-2.0.0.jar' project/repo.nix
-  grep -q 'org/scala-sbt/main_3/2.0.0/main_3-2.0.0.jar' project/repo.nix
-)
+run_sbtix_gen_nix() {
+  local project_dir="$1"
+
+  (
+    cd "${project_dir}"
+    export HOME="${project_dir}/home"
+    "${SBTIX_BIN}" --error "show sbtVersion"
+    "${SBTIX_BIN}" genNix
+
+    test -f repo.nix
+    test -f project/repo.nix
+    grep -q 'org/scala-sbt/sbt/2.0.0/sbt-2.0.0.jar' project/repo.nix
+    grep -q 'org/scala-sbt/main_3/2.0.0/main_3-2.0.0.jar' project/repo.nix
+  )
+}
+
+simple_project="$(create_project "sbtix-sbt2-cli-smoke")"
+run_sbtix_gen_nix "${simple_project}"
+
+sbt_plugin_project="$(create_project "sbtix-sbt2-cli-with-sbt-plugin")"
+cat > "${sbt_plugin_project}/project/plugins.sbt" <<'EOF'
+addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "2.3.1")
+EOF
+
+run_sbtix_gen_nix "${sbt_plugin_project}"
+
+# Generated Metals/Bloop plugin files are common in developer checkouts. Under
+# sbt 2, the wrapper must load sbtix in the build and meta-build while
+# coexisting with Metals' recursive plugin files.
+metals_project="$(create_project "sbtix-sbt2-cli-with-metals")"
+cat > "${metals_project}/project/plugins.sbt" <<'EOF'
+addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "2.3.1")
+EOF
+
+for metals_file in \
+  "${metals_project}/project/metals.sbt" \
+  "${metals_project}/project/project/metals.sbt" \
+  "${metals_project}/project/project/project/metals.sbt"; do
+  mkdir -p "$(dirname "${metals_file}")"
+  cat > "${metals_file}" <<'EOF'
+addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % "2.0.19")
+EOF
+done
+
+run_sbtix_gen_nix "${metals_project}"
