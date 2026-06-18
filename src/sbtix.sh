@@ -120,26 +120,48 @@ cleanup_injected_plugins() {
   done
 }
 
-inject_project_plugin() {
+inject_sbt_file() {
   dir="$1"
+  source="$2"
+  name="$3"
   if [ ! -d "${dir}" ]; then
     mkdir -p "${dir}"
     CREATED_PLUGIN_DIRS="${dir} ${CREATED_PLUGIN_DIRS}"
   fi
 
-  file="${dir}/sbtix-auto-plugin-$$.sbt"
+  file="${dir}/${name}-$$.sbt"
   if [ -e "${file}" ] || [ -L "${file}" ]; then
     echo "sbtix: refusing to overwrite existing temporary plugin file: ${file}" >&2
     exit 1
   fi
 
-  ln -s "@plugin@" "${file}"
+  ln -s "${source}" "${file}"
   INJECTED_PLUGIN_FILES="${file} ${INJECTED_PLUGIN_FILES}"
+}
+
+inject_project_plugin() {
+  inject_sbt_file "$1" "@plugin@" "sbtix-auto-plugin"
+}
+
+inject_generated_ide_plugin_compat() {
+  inject_sbt_file "$1" "@generatedIdePluginCompat@" "zz-sbtix-generated-ide-plugin-compat"
+}
+
+inject_generated_ide_plugin_compat_files() {
+  if [ ! -d "project" ]; then
+    return
+  fi
+
+  metals_dirs="$(find project -name metals.sbt -type f -exec dirname {} \; 2>/dev/null | sort -u || true)"
+  for dir in ${metals_dirs}; do
+    inject_generated_ide_plugin_compat "${dir}"
+  done
 }
 
 trap cleanup_injected_plugins EXIT
 
 if [ "${SBTIX_SBT_MAJOR}" = 2 ]; then
+  inject_generated_ide_plugin_compat_files
   inject_project_plugin "project"
   inject_project_plugin "project/project"
 fi
