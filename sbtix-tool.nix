@@ -58,6 +58,18 @@ let
   pluginsSbtix = writeText "plugins.sbt" ''
     resolvers += Resolver.file("Sbtix Plugin Repo", file("${sbtixPluginRepo}/plugin-repo"))(Resolver.ivyStylePatterns)
 
+    // sbt 2 plugin builds may also load Metals/Bloop, which brings
+    // jsoniter-scala-core_2.13. sbtix uses Scala 2.13-compatible uPickle on
+    // the sbt 2 axis, so keep unused jsoniter _3 tooling edges out of the
+    // plugin resolution graph.
+    excludeDependencies += ExclusionRule("com.github.plokhotnyuk.jsoniter-scala", "jsoniter-scala-core_3")
+
+    // Metals' generated sbt-bloop plugin can attempt to run bloopInstall while
+    // sbtix is loading recursive meta-builds. During sbtix generation that IDE
+    // export is not needed; keeping this command present as a no-op lets the
+    // build load and leaves dependency locking to sbtix.
+    commands += Command.command("bloopInstall")(identity)
+
     addSbtPlugin("se.nullable.sbtix" % "sbtix" % "${pluginVersion}")
   '';
 

@@ -385,6 +385,14 @@
       url = "https://repo1.maven.org/maven2/com/jcraft/jsch.agentproxy/0.0.6/jsch.agentproxy-0.0.6.pom";
       sha256 = "F21C863E27272EAAA96889CAEDDD8D031433D2EBF1D60B36FF563CEAE46428AB";
     };
+    "nix-public/com/lihaoyi/acyclic_2.13.16/0.3.19/acyclic_2.13.16-0.3.19.jar" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/acyclic_2.13.16/0.3.19/acyclic_2.13.16-0.3.19.jar";
+      sha256 = "44334D65A9CBD8551FFCD11DCA1B02AD63248DB3335C8F047D5C1048DFEA9450";
+    };
+    "nix-public/com/lihaoyi/acyclic_2.13.16/0.3.19/acyclic_2.13.16-0.3.19.pom" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/acyclic_2.13.16/0.3.19/acyclic_2.13.16-0.3.19.pom";
+      sha256 = "24DA41C8B02A0F51DE9BC84979472C316EB6311A0DBFA98DCDEFBC17101A7E3C";
+    };
     "nix-public/com/lihaoyi/fansi_2.13/0.2.12/fansi-0.2.12.jar" = {
       url = "https://repo1.maven.org/maven2/com/lihaoyi/fansi_2.13/0.2.12/fansi_2.13-0.2.12.jar";
       sha256 = "D92E5B0EA4D946F6567DB57FBEFFC34D4020597C675CB804ADE6CC38A198FF35";
@@ -429,17 +437,29 @@
       url = "https://repo1.maven.org/maven2/com/lihaoyi/geny_2.13/0.6.5/geny_2.13-0.6.5.pom";
       sha256 = "9A4580689AF2BA69AEE70369B1E7D41793C98535758E36D100CEBE22E3C16822";
     };
-    "nix-public/com/lihaoyi/geny_3/1.1.1/geny_3-1.1.1-sources.jar" = {
-      url = "https://repo1.maven.org/maven2/com/lihaoyi/geny_3/1.1.1/geny_3-1.1.1-sources.jar";
-      sha256 = "D5709469C3F2602122DBC7D94B627DE2DEF7E40E99F08BB9B61B95DC93DBEB51";
+    "nix-public/com/lihaoyi/geny_2.13/1.1.1/geny-1.1.1-sources.jar" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/geny_2.13/1.1.1/geny_2.13-1.1.1-sources.jar";
+      sha256 = "BD850D83F722194FC9160241210D4FC2BC613ECDCC9A11BFD6930A7B776D554F";
     };
-    "nix-public/com/lihaoyi/geny_3/1.1.1/geny_3-1.1.1.jar" = {
-      url = "https://repo1.maven.org/maven2/com/lihaoyi/geny_3/1.1.1/geny_3-1.1.1.jar";
-      sha256 = "39658649F90B631A4FD63187724F16BA8A045E1B10A513528F34517FB2EDF98B";
+    "nix-public/com/lihaoyi/geny_2.13/1.1.1/geny-1.1.1.jar" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/geny_2.13/1.1.1/geny_2.13-1.1.1.jar";
+      sha256 = "20AF231C222FC71C29E06B3CD8D9190A16B412DA83CC49FB0B778CF2DC6F94D2";
     };
-    "nix-public/com/lihaoyi/geny_3/1.1.1/geny_3-1.1.1.pom" = {
-      url = "https://repo1.maven.org/maven2/com/lihaoyi/geny_3/1.1.1/geny_3-1.1.1.pom";
-      sha256 = "1B89C91486F05F61FA5DC68FF56AE42BBF06184D523A6BE88D003917780F38B2";
+    "nix-public/com/lihaoyi/geny_2.13/1.1.1/geny-1.1.1.pom" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/geny_2.13/1.1.1/geny_2.13-1.1.1.pom";
+      sha256 = "848F7604E685EAF2A5B11F38B8B5DE06934A769F3E9D17C077260422D32ED35A";
+    };
+    "nix-public/com/lihaoyi/geny_2.13/1.1.1/geny_2.13-1.1.1-sources.jar" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/geny_2.13/1.1.1/geny_2.13-1.1.1-sources.jar";
+      sha256 = "BD850D83F722194FC9160241210D4FC2BC613ECDCC9A11BFD6930A7B776D554F";
+    };
+    "nix-public/com/lihaoyi/geny_2.13/1.1.1/geny_2.13-1.1.1.jar" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/geny_2.13/1.1.1/geny_2.13-1.1.1.jar";
+      sha256 = "20AF231C222FC71C29E06B3CD8D9190A16B412DA83CC49FB0B778CF2DC6F94D2";
+    };
+    "nix-public/com/lihaoyi/geny_2.13/1.1.1/geny_2.13-1.1.1.pom" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/geny_2.13/1.1.1/geny_2.13-1.1.1.pom";
+      sha256 = "848F7604E685EAF2A5B11F38B8B5DE06934A769F3E9D17C077260422D32ED35A";
     };
     "nix-public/com/lihaoyi/pprint_2.13/0.6.4/pprint-0.6.4.jar" = {
       url = "https://repo1.maven.org/maven2/com/lihaoyi/pprint_2.13/0.6.4/pprint_2.13-0.6.4.jar";
@@ -553,65 +573,125 @@
       url = "https://repo1.maven.org/maven2/com/lihaoyi/sourcecode_3/0.4.4/sourcecode_3-0.4.4.pom";
       sha256 = "778DCB915D9B543B7C6B734F6EA46C80F3C299AF97916072BB0396593C86BD1B";
     };
-    "nix-public/com/lihaoyi/ujson_3/4.4.3/ujson_3-4.4.3-sources.jar" = {
-      url = "https://repo1.maven.org/maven2/com/lihaoyi/ujson_3/4.4.3/ujson_3-4.4.3-sources.jar";
-      sha256 = "E64A5A38AB13502EB021C9FC1C8740FA825DBB11C717268FC9B308EE099CE3AE";
+    "nix-public/com/lihaoyi/ujson_2.13/4.4.3/ujson-4.4.3-sources.jar" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/ujson_2.13/4.4.3/ujson_2.13-4.4.3-sources.jar";
+      sha256 = "AB093B605033F6E2CF3B3727A54129BE1CC1FE8941CE33D62A90C14748C6AD8F";
     };
-    "nix-public/com/lihaoyi/ujson_3/4.4.3/ujson_3-4.4.3.jar" = {
-      url = "https://repo1.maven.org/maven2/com/lihaoyi/ujson_3/4.4.3/ujson_3-4.4.3.jar";
-      sha256 = "2FD8083AABC7FB4252C299909B19B2881326A03502EBA8859D39D4B2CEB7A8B2";
+    "nix-public/com/lihaoyi/ujson_2.13/4.4.3/ujson-4.4.3.jar" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/ujson_2.13/4.4.3/ujson_2.13-4.4.3.jar";
+      sha256 = "57F3D776AD391B6F68B6DC6D9EECC427CD9F4E924A27404E1ACE68480DEBA36A";
     };
-    "nix-public/com/lihaoyi/ujson_3/4.4.3/ujson_3-4.4.3.pom" = {
-      url = "https://repo1.maven.org/maven2/com/lihaoyi/ujson_3/4.4.3/ujson_3-4.4.3.pom";
-      sha256 = "E3AA2200D1C3DC0344FC0F9C6DD8D1717E3108ACA3860F3B2487EE6C0E30F578";
+    "nix-public/com/lihaoyi/ujson_2.13/4.4.3/ujson-4.4.3.pom" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/ujson_2.13/4.4.3/ujson_2.13-4.4.3.pom";
+      sha256 = "1E6490C68B0A04826F7B6EBCBFB4C2DAF8DFBB5D9EA7BD9A6105EDD4E3087C60";
     };
-    "nix-public/com/lihaoyi/upack_3/4.4.3/upack_3-4.4.3-sources.jar" = {
-      url = "https://repo1.maven.org/maven2/com/lihaoyi/upack_3/4.4.3/upack_3-4.4.3-sources.jar";
-      sha256 = "B4B2355E6CAE5E3D9CFCB0C0A2DF5AB92EC5A2D6A7E43EFCDEA56FED317851B4";
+    "nix-public/com/lihaoyi/ujson_2.13/4.4.3/ujson_2.13-4.4.3-sources.jar" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/ujson_2.13/4.4.3/ujson_2.13-4.4.3-sources.jar";
+      sha256 = "AB093B605033F6E2CF3B3727A54129BE1CC1FE8941CE33D62A90C14748C6AD8F";
     };
-    "nix-public/com/lihaoyi/upack_3/4.4.3/upack_3-4.4.3.jar" = {
-      url = "https://repo1.maven.org/maven2/com/lihaoyi/upack_3/4.4.3/upack_3-4.4.3.jar";
-      sha256 = "40BC531F04388FF1993078EFFB73FA601AB8F138F45639CE922C652CB4594268";
+    "nix-public/com/lihaoyi/ujson_2.13/4.4.3/ujson_2.13-4.4.3.jar" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/ujson_2.13/4.4.3/ujson_2.13-4.4.3.jar";
+      sha256 = "57F3D776AD391B6F68B6DC6D9EECC427CD9F4E924A27404E1ACE68480DEBA36A";
     };
-    "nix-public/com/lihaoyi/upack_3/4.4.3/upack_3-4.4.3.pom" = {
-      url = "https://repo1.maven.org/maven2/com/lihaoyi/upack_3/4.4.3/upack_3-4.4.3.pom";
-      sha256 = "CD0449D7E3D7A665B3454D7DD1DE58B87D79FFAF458C0BF8362B2BC5C7B7D02A";
+    "nix-public/com/lihaoyi/ujson_2.13/4.4.3/ujson_2.13-4.4.3.pom" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/ujson_2.13/4.4.3/ujson_2.13-4.4.3.pom";
+      sha256 = "1E6490C68B0A04826F7B6EBCBFB4C2DAF8DFBB5D9EA7BD9A6105EDD4E3087C60";
     };
-    "nix-public/com/lihaoyi/upickle-core_3/4.4.3/upickle-core_3-4.4.3-sources.jar" = {
-      url = "https://repo1.maven.org/maven2/com/lihaoyi/upickle-core_3/4.4.3/upickle-core_3-4.4.3-sources.jar";
-      sha256 = "04A4D1A6DF374A5D03F1A0AC7048DCFD60BE5C4032C42355032117C375B7F647";
+    "nix-public/com/lihaoyi/upack_2.13/4.4.3/upack-4.4.3-sources.jar" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/upack_2.13/4.4.3/upack_2.13-4.4.3-sources.jar";
+      sha256 = "A9DDC1BD7383FE43C8B06A53A604B2437A6DEB27DF56F2E65880823A33C99230";
     };
-    "nix-public/com/lihaoyi/upickle-core_3/4.4.3/upickle-core_3-4.4.3.jar" = {
-      url = "https://repo1.maven.org/maven2/com/lihaoyi/upickle-core_3/4.4.3/upickle-core_3-4.4.3.jar";
-      sha256 = "9B9BE4B677AB6FBC6B82FE5486908A39664F51E9344D1903ADA1C6766D251CE2";
+    "nix-public/com/lihaoyi/upack_2.13/4.4.3/upack-4.4.3.jar" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/upack_2.13/4.4.3/upack_2.13-4.4.3.jar";
+      sha256 = "29A5B175155B98F86E7F8899D51815AEED52A655C0A4EC796EEBC6A3C3C2A01B";
     };
-    "nix-public/com/lihaoyi/upickle-core_3/4.4.3/upickle-core_3-4.4.3.pom" = {
-      url = "https://repo1.maven.org/maven2/com/lihaoyi/upickle-core_3/4.4.3/upickle-core_3-4.4.3.pom";
-      sha256 = "F6E7D3E9AED732A402D9C6D412AB8D8D2E941DF1C6D16615E00C2378E6A01B38";
+    "nix-public/com/lihaoyi/upack_2.13/4.4.3/upack-4.4.3.pom" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/upack_2.13/4.4.3/upack_2.13-4.4.3.pom";
+      sha256 = "E63CF4653DAAAFB7609ACE40D65F0262B1D4ADA5B846934C0E9515BE5CBA2838";
     };
-    "nix-public/com/lihaoyi/upickle-implicits_3/4.4.3/upickle-implicits_3-4.4.3-sources.jar" = {
-      url = "https://repo1.maven.org/maven2/com/lihaoyi/upickle-implicits_3/4.4.3/upickle-implicits_3-4.4.3-sources.jar";
-      sha256 = "BB5935EAD19788CFEF850E96874AF1D60A159E61816137BAFD2FFBECB07DC304";
+    "nix-public/com/lihaoyi/upack_2.13/4.4.3/upack_2.13-4.4.3-sources.jar" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/upack_2.13/4.4.3/upack_2.13-4.4.3-sources.jar";
+      sha256 = "A9DDC1BD7383FE43C8B06A53A604B2437A6DEB27DF56F2E65880823A33C99230";
     };
-    "nix-public/com/lihaoyi/upickle-implicits_3/4.4.3/upickle-implicits_3-4.4.3.jar" = {
-      url = "https://repo1.maven.org/maven2/com/lihaoyi/upickle-implicits_3/4.4.3/upickle-implicits_3-4.4.3.jar";
-      sha256 = "3BDE97B7D588F42E8074248160E64A816226C70BFB352EC1D834ACFA0A1C73AD";
+    "nix-public/com/lihaoyi/upack_2.13/4.4.3/upack_2.13-4.4.3.jar" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/upack_2.13/4.4.3/upack_2.13-4.4.3.jar";
+      sha256 = "29A5B175155B98F86E7F8899D51815AEED52A655C0A4EC796EEBC6A3C3C2A01B";
     };
-    "nix-public/com/lihaoyi/upickle-implicits_3/4.4.3/upickle-implicits_3-4.4.3.pom" = {
-      url = "https://repo1.maven.org/maven2/com/lihaoyi/upickle-implicits_3/4.4.3/upickle-implicits_3-4.4.3.pom";
-      sha256 = "2C51FC4F19CD43C29255BBB621A475C761951817FF5A8ECA23C9CD4EF5F7DE38";
+    "nix-public/com/lihaoyi/upack_2.13/4.4.3/upack_2.13-4.4.3.pom" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/upack_2.13/4.4.3/upack_2.13-4.4.3.pom";
+      sha256 = "E63CF4653DAAAFB7609ACE40D65F0262B1D4ADA5B846934C0E9515BE5CBA2838";
     };
-    "nix-public/com/lihaoyi/upickle_3/4.4.3/upickle_3-4.4.3-sources.jar" = {
-      url = "https://repo1.maven.org/maven2/com/lihaoyi/upickle_3/4.4.3/upickle_3-4.4.3-sources.jar";
-      sha256 = "85F14FE2C3978F6A8C2F0B71385BF6BCDD62C6AEB1FE31182ECB59555033F161";
+    "nix-public/com/lihaoyi/upickle-core_2.13/4.4.3/upickle-core-4.4.3-sources.jar" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/upickle-core_2.13/4.4.3/upickle-core_2.13-4.4.3-sources.jar";
+      sha256 = "D7B4450B32BAC12814BE842929071A28FF822C1A8E8A38F6C3C49B00D30EEA6E";
     };
-    "nix-public/com/lihaoyi/upickle_3/4.4.3/upickle_3-4.4.3.jar" = {
-      url = "https://repo1.maven.org/maven2/com/lihaoyi/upickle_3/4.4.3/upickle_3-4.4.3.jar";
-      sha256 = "F68012B4CDF64686C101B1C84FF47E79ACF892E0ED50BCEC51D02C2807082351";
+    "nix-public/com/lihaoyi/upickle-core_2.13/4.4.3/upickle-core-4.4.3.jar" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/upickle-core_2.13/4.4.3/upickle-core_2.13-4.4.3.jar";
+      sha256 = "3B4D2A052EAA30728A628605DBD6DBFA9455C943751C50CC9E06ACD9F88D125B";
     };
-    "nix-public/com/lihaoyi/upickle_3/4.4.3/upickle_3-4.4.3.pom" = {
-      url = "https://repo1.maven.org/maven2/com/lihaoyi/upickle_3/4.4.3/upickle_3-4.4.3.pom";
-      sha256 = "3E66BCE6B43D5A32135B781F0D712E9CC61AEB3E7AC368B18BB06B185A51DBD7";
+    "nix-public/com/lihaoyi/upickle-core_2.13/4.4.3/upickle-core-4.4.3.pom" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/upickle-core_2.13/4.4.3/upickle-core_2.13-4.4.3.pom";
+      sha256 = "676E243D6BE6F278D4118AFDA1E18C451EFDE1434C0C175CAD39A86FF97D23FE";
+    };
+    "nix-public/com/lihaoyi/upickle-core_2.13/4.4.3/upickle-core_2.13-4.4.3-sources.jar" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/upickle-core_2.13/4.4.3/upickle-core_2.13-4.4.3-sources.jar";
+      sha256 = "D7B4450B32BAC12814BE842929071A28FF822C1A8E8A38F6C3C49B00D30EEA6E";
+    };
+    "nix-public/com/lihaoyi/upickle-core_2.13/4.4.3/upickle-core_2.13-4.4.3.jar" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/upickle-core_2.13/4.4.3/upickle-core_2.13-4.4.3.jar";
+      sha256 = "3B4D2A052EAA30728A628605DBD6DBFA9455C943751C50CC9E06ACD9F88D125B";
+    };
+    "nix-public/com/lihaoyi/upickle-core_2.13/4.4.3/upickle-core_2.13-4.4.3.pom" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/upickle-core_2.13/4.4.3/upickle-core_2.13-4.4.3.pom";
+      sha256 = "676E243D6BE6F278D4118AFDA1E18C451EFDE1434C0C175CAD39A86FF97D23FE";
+    };
+    "nix-public/com/lihaoyi/upickle-implicits_2.13/4.4.3/upickle-implicits-4.4.3-sources.jar" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/upickle-implicits_2.13/4.4.3/upickle-implicits_2.13-4.4.3-sources.jar";
+      sha256 = "59D749A45D2479DD4B98331D378550428DEA06DC120A2B3977CFCFAD817D2EFB";
+    };
+    "nix-public/com/lihaoyi/upickle-implicits_2.13/4.4.3/upickle-implicits-4.4.3.jar" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/upickle-implicits_2.13/4.4.3/upickle-implicits_2.13-4.4.3.jar";
+      sha256 = "4D0362E0B187EE5FE45AC568E9E7F2EAE698D2B1AB9B37D994D3F2CA1C6D8E2D";
+    };
+    "nix-public/com/lihaoyi/upickle-implicits_2.13/4.4.3/upickle-implicits-4.4.3.pom" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/upickle-implicits_2.13/4.4.3/upickle-implicits_2.13-4.4.3.pom";
+      sha256 = "B3541CA65B6FB164CD5C7ED436ED686D70F56678C78919FF6880073EAD967E5E";
+    };
+    "nix-public/com/lihaoyi/upickle-implicits_2.13/4.4.3/upickle-implicits_2.13-4.4.3-sources.jar" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/upickle-implicits_2.13/4.4.3/upickle-implicits_2.13-4.4.3-sources.jar";
+      sha256 = "59D749A45D2479DD4B98331D378550428DEA06DC120A2B3977CFCFAD817D2EFB";
+    };
+    "nix-public/com/lihaoyi/upickle-implicits_2.13/4.4.3/upickle-implicits_2.13-4.4.3.jar" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/upickle-implicits_2.13/4.4.3/upickle-implicits_2.13-4.4.3.jar";
+      sha256 = "4D0362E0B187EE5FE45AC568E9E7F2EAE698D2B1AB9B37D994D3F2CA1C6D8E2D";
+    };
+    "nix-public/com/lihaoyi/upickle-implicits_2.13/4.4.3/upickle-implicits_2.13-4.4.3.pom" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/upickle-implicits_2.13/4.4.3/upickle-implicits_2.13-4.4.3.pom";
+      sha256 = "B3541CA65B6FB164CD5C7ED436ED686D70F56678C78919FF6880073EAD967E5E";
+    };
+    "nix-public/com/lihaoyi/upickle_2.13/4.4.3/upickle-4.4.3-sources.jar" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/upickle_2.13/4.4.3/upickle_2.13-4.4.3-sources.jar";
+      sha256 = "FF52618D5218399FAD7F25EFC3E19EC0240DF7BB14934832E49696245B44F2C4";
+    };
+    "nix-public/com/lihaoyi/upickle_2.13/4.4.3/upickle-4.4.3.jar" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/upickle_2.13/4.4.3/upickle_2.13-4.4.3.jar";
+      sha256 = "EF4CABDE41B3425453ECEA54A436585589D9AE0BE0365393226DC5CDAD87CF50";
+    };
+    "nix-public/com/lihaoyi/upickle_2.13/4.4.3/upickle-4.4.3.pom" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/upickle_2.13/4.4.3/upickle_2.13-4.4.3.pom";
+      sha256 = "A320BA7947FE8B2716D8042E93C476C78EC8CA9D5E7B4BA20B38940B600293BF";
+    };
+    "nix-public/com/lihaoyi/upickle_2.13/4.4.3/upickle_2.13-4.4.3-sources.jar" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/upickle_2.13/4.4.3/upickle_2.13-4.4.3-sources.jar";
+      sha256 = "FF52618D5218399FAD7F25EFC3E19EC0240DF7BB14934832E49696245B44F2C4";
+    };
+    "nix-public/com/lihaoyi/upickle_2.13/4.4.3/upickle_2.13-4.4.3.jar" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/upickle_2.13/4.4.3/upickle_2.13-4.4.3.jar";
+      sha256 = "EF4CABDE41B3425453ECEA54A436585589D9AE0BE0365393226DC5CDAD87CF50";
+    };
+    "nix-public/com/lihaoyi/upickle_2.13/4.4.3/upickle_2.13-4.4.3.pom" = {
+      url = "https://repo1.maven.org/maven2/com/lihaoyi/upickle_2.13/4.4.3/upickle_2.13-4.4.3.pom";
+      sha256 = "A320BA7947FE8B2716D8042E93C476C78EC8CA9D5E7B4BA20B38940B600293BF";
     };
     "nix-public/com/lmax/disruptor/3.4.2/disruptor-3.4.2-sources.jar" = {
       url = "https://repo1.maven.org/maven2/com/lmax/disruptor/3.4.2/disruptor-3.4.2-sources.jar";
@@ -1917,6 +1997,14 @@
       url = "https://repo1.maven.org/maven2/org/scala-lang/modules/scala-xml_3/2.4.0/scala-xml_3-2.4.0.pom";
       sha256 = "E2D25EF7146D46391E87108A17130FE448587E45766367A7FC0782A886A53690";
     };
+    "nix-public/org/scala-lang/scala-compiler/2.13.16/scala-compiler-2.13.16.jar" = {
+      url = "https://repo1.maven.org/maven2/org/scala-lang/scala-compiler/2.13.16/scala-compiler-2.13.16.jar";
+      sha256 = "F59982714591E321BA9C087AF2C8666E2F5FB92B11A0CEF72C2C5E9B342152D3";
+    };
+    "nix-public/org/scala-lang/scala-compiler/2.13.16/scala-compiler-2.13.16.pom" = {
+      url = "https://repo1.maven.org/maven2/org/scala-lang/scala-compiler/2.13.16/scala-compiler-2.13.16.pom";
+      sha256 = "954B555B12C22D4EA59175517FDD9578E06E62EBA8727A2073A6596FA7EB06AB";
+    };
     "nix-public/org/scala-lang/scala-compiler/2.13.4/scala-compiler-2.13.4.jar" = {
       url = "https://repo1.maven.org/maven2/org/scala-lang/scala-compiler/2.13.4/scala-compiler-2.13.4.jar";
       sha256 = "18381B13891FF1C8FC168AE2B01C43AA2B4F92FA7F220C82635CFFF8E5F13946";
@@ -1932,10 +2020,6 @@
     "nix-public/org/scala-lang/scala-compiler/2.13.6/scala-compiler-2.13.6.pom" = {
       url = "https://repo1.maven.org/maven2/org/scala-lang/scala-compiler/2.13.6/scala-compiler-2.13.6.pom";
       sha256 = "23CD92849885F259518B3364BEDE753BE15A8DD96E74126E5E9ECA692F350B1A";
-    };
-    "nix-public/org/scala-lang/scala-library/2.13.15/scala-library-2.13.15.pom" = {
-      url = "https://repo1.maven.org/maven2/org/scala-lang/scala-library/2.13.15/scala-library-2.13.15.pom";
-      sha256 = "F81D6F32917A0E931DAA6559A8500BE1C62FF8C6C82DB071DCDBEBF60BBD4786";
     };
     "nix-public/org/scala-lang/scala-library/2.13.16/scala-library-2.13.16-sources.jar" = {
       url = "https://repo1.maven.org/maven2/org/scala-lang/scala-library/2.13.16/scala-library-2.13.16-sources.jar";
@@ -1985,6 +2069,14 @@
       url = "https://repo1.maven.org/maven2/org/scala-lang/scala-reflect/2.13.15/scala-reflect-2.13.15.pom";
       sha256 = "AA9CAC59324824E5E73DC3456FD3C3AB5F504DF63D2F1DDB6413783ABB1CECD6";
     };
+    "nix-public/org/scala-lang/scala-reflect/2.13.16/scala-reflect-2.13.16.jar" = {
+      url = "https://repo1.maven.org/maven2/org/scala-lang/scala-reflect/2.13.16/scala-reflect-2.13.16.jar";
+      sha256 = "FB49CCD9CAC7464486AB993CDA20A3C1569D8EF26F052E897577AD2A4970FB1D";
+    };
+    "nix-public/org/scala-lang/scala-reflect/2.13.16/scala-reflect-2.13.16.pom" = {
+      url = "https://repo1.maven.org/maven2/org/scala-lang/scala-reflect/2.13.16/scala-reflect-2.13.16.pom";
+      sha256 = "66B1833F1EE675AB2AE5F6D55B38DDAD472246CDC092132B8C52D0CF94A31B60";
+    };
     "nix-public/org/scala-lang/scala-reflect/2.13.4/scala-reflect-2.13.4.jar" = {
       url = "https://repo1.maven.org/maven2/org/scala-lang/scala-reflect/2.13.4/scala-reflect-2.13.4.jar";
       sha256 = "6A85F568BB38CA0A04506DE5E92AAF208E850B0AB3134782B1D62CC0CF93D086";
@@ -2033,17 +2125,17 @@
       url = "https://repo1.maven.org/maven2/org/scala-lang/scala3-interfaces/3.8.4/scala3-interfaces-3.8.4.pom";
       sha256 = "66F3094B7B55EB22736614BB6242CC3496058F47016C1F1EF3C7E1BB3D611DB5";
     };
-    "nix-public/org/scala-lang/scala3-library_3/3.3.7/scala3-library_3-3.3.7-sources.jar" = {
-      url = "https://repo1.maven.org/maven2/org/scala-lang/scala3-library_3/3.3.7/scala3-library_3-3.3.7-sources.jar";
-      sha256 = "D06C4573324F048C6E4F0526DA6B63753F20102BE1FC8C752C97E3BB6B0E80C2";
+    "nix-public/org/scala-lang/scala3-library_3/3.1.3/scala3-library_3-3.1.3-sources.jar" = {
+      url = "https://repo1.maven.org/maven2/org/scala-lang/scala3-library_3/3.1.3/scala3-library_3-3.1.3-sources.jar";
+      sha256 = "5E0639672DA01681B117781B6325374D3A3DD3D6BB12DE7782DC6C7B2115485D";
     };
-    "nix-public/org/scala-lang/scala3-library_3/3.3.7/scala3-library_3-3.3.7.jar" = {
-      url = "https://repo1.maven.org/maven2/org/scala-lang/scala3-library_3/3.3.7/scala3-library_3-3.3.7.jar";
-      sha256 = "A16E046F4A9DF9E0D0E0BC54BF6298C94D7D867457F7B3B68291A88C568B92D0";
+    "nix-public/org/scala-lang/scala3-library_3/3.1.3/scala3-library_3-3.1.3.jar" = {
+      url = "https://repo1.maven.org/maven2/org/scala-lang/scala3-library_3/3.1.3/scala3-library_3-3.1.3.jar";
+      sha256 = "1AC79970D94A1762CE6AF4208820B4FA4C70093409DECAAD85C69D8B5F46E422";
     };
-    "nix-public/org/scala-lang/scala3-library_3/3.3.7/scala3-library_3-3.3.7.pom" = {
-      url = "https://repo1.maven.org/maven2/org/scala-lang/scala3-library_3/3.3.7/scala3-library_3-3.3.7.pom";
-      sha256 = "992BB5414F5855DA7884134EB518D5F700E2849E8F3C4D5164E5C4215EBA2151";
+    "nix-public/org/scala-lang/scala3-library_3/3.1.3/scala3-library_3-3.1.3.pom" = {
+      url = "https://repo1.maven.org/maven2/org/scala-lang/scala3-library_3/3.1.3/scala3-library_3-3.1.3.pom";
+      sha256 = "D61E035994E678729D9EF1DCFE538BFE1E4A94E665DBD961A0FA327411A2F4D3";
     };
     "nix-public/org/scala-lang/scala3-library_3/3.8.4/scala3-library_3-3.8.4-sources.jar" = {
       url = "https://repo1.maven.org/maven2/org/scala-lang/scala3-library_3/3.8.4/scala3-library_3-3.8.4-sources.jar";

@@ -126,6 +126,6 @@ scalafmtOnCompile := false
 libraryDependencies ++= Seq(
   coursierDependency("coursier"),
   coursierDependency("coursier-sbt-maven-repository"),
-  "com.lihaoyi" %% "upickle" % "4.4.3",
+  ("com.lihaoyi" %% "upickle" % "4.4.3").cross(CrossVersion.for3Use2_13),
   "org.scalatest" %% "scalatest" % "3.2.20" % Test
 )
