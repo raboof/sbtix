@@ -224,9 +224,6 @@ class CoursierArtifactFetcher(
 
     def seenPom(url: String, file: File): Boolean =
       pomVisitKeys(file, Some(url)).exists(seen)
-
-    def snapshot: Set[String] =
-      seen.toSet
   }
 
   private val ivyLocalResolver: Resolver =
@@ -1188,8 +1185,7 @@ class CoursierArtifactFetcher(
   ): Set[NixArtifact] = {
     if (!traversal.visit(pomFile, sourceUrl, includeClasspathArtifacts)) Set.empty
     else {
-      val seen = traversal.snapshot
-      val pom = cachedPomModel(pomFile, repoDescriptors, seen)
+      val pom = cachedPomModel(pomFile, repoDescriptors)
       val classpathArtifacts =
         if (includeClasspathArtifacts) pom.classpathDeps.flatMap(dependencyLockCandidates).map((_, true))
         else Set.empty[(PomModel.PomDep, Boolean)]
@@ -1241,15 +1237,21 @@ class CoursierArtifactFetcher(
 
   private def cachedPomModel(
       pomFile: File,
-      repoDescriptors: Seq[RepoDescriptor],
-      seen: Set[String]
+      repoDescriptors: Seq[RepoDescriptor]
   ): PomModel.Model =
-    pomModelCache.getOrElseUpdate(pomFile.getCanonicalPath, parsePomWithInheritedProperties(pomFile, repoDescriptors, seen))
+    cachedPomModel(pomFile, repoDescriptors, Set(pomFileVisitKey(pomFile)))
+
+  private def cachedPomModel(
+      pomFile: File,
+      repoDescriptors: Seq[RepoDescriptor],
+      parseSeen: Set[String]
+  ): PomModel.Model =
+    pomModelCache.getOrElseUpdate(pomFile.getCanonicalPath, parsePomWithInheritedProperties(pomFile, repoDescriptors, parseSeen))
 
   private def parsePomWithInheritedProperties(
       pomFile: File,
       repoDescriptors: Seq[RepoDescriptor],
-      seen: Set[String]
+      parseSeen: Set[String]
   ): PomModel.Model = {
     def parseCachedPom(
         inheritedProperties: Map[String, String] = Map.empty,
@@ -1268,9 +1270,9 @@ class CoursierArtifactFetcher(
     val parentModels =
       firstPass.parents.flatMap { parent =>
         pomDependencyCandidates(parent, repoDescriptors, fetchIfMissing = true)
-          .filterNot { case (url, file) => seenPom(url, file, seen) }
+          .filterNot { case (url, file) => seenPom(url, file, parseSeen) }
           .map { case (url, file) =>
-            cachedPomModel(file, repoDescriptors, seen + pomUrlVisitKey(url) + pomFileVisitKey(file))
+            cachedPomModel(file, repoDescriptors, parseSeen + pomUrlVisitKey(url) + pomFileVisitKey(file))
           }
       }
     val inheritedProperties = parentModels.flatMap(_.properties).toMap

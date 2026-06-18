@@ -4,8 +4,8 @@
 $ exists repo.nix
 $ exists project/repo.nix
 
-# The application repository should contain the resolved build artifacts, but
-# cached metadata for evicted modules is intentionally not part of its contract.
+# The application repository should contain resolved build artifacts. Evicted
+# jars stay absent, while evicted POM metadata may be locked for offline replay.
 $ exec grep -q 'org/scala-lang/scala-library/2.13.18/scala-library-2.13.18.jar' repo.nix
 $ exec grep -q 'org/scalatest/scalatest_2.13/3.2.20/scalatest_2.13-3.2.20.jar' repo.nix
 $ exec grep -q 'io/github/java-diff-utils/java-diff-utils/4.16/java-diff-utils-4.16.jar' repo.nix
