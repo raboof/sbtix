@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.8
+
+### Fixed
+
+- Build sbt 2 applications that use sbt-native-packager by running sbt with `--server`, using the scoped `Universal / stage` task, and copying staged output from sbt 2's `target/out/.../universal/stage` layout.
+- Bootstrap the generated sbtix plugin artifact on the correct sbt 2 / Scala 3 axis for source-backed generated Nix builds.
+
 ## 1.2.7
 
 ### Fixed
