@@ -9,7 +9,7 @@ let
       concatMap
       concatStringsSep
       flatten
-      fold
+      foldr
       init
       mapAttrsToList
       optionalString
@@ -297,7 +297,7 @@ in rec {
     ivyRepoPattern = "[organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]";
 
     mergeAttr = attr: repo:
-        fold (a: b: a // b) {} (catAttrs attr repo);
+        foldr (a: b: a // b) {} (catAttrs attr repo);
 
     buildSbtProject = args@{repo, name, buildInputs ? [], sbtixBuildInputs ? "", sbtOptions ? "", pluginBootstrap ? "", ...}:
       let
